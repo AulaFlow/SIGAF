@@ -4,8 +4,8 @@
 --   * Cifrado en reposo de nombre y apellidos del alumno (AES-256, pgcrypto)
 --   * Seudonimización de la matrícula con HMAC-SHA256 y llave secreta
 --   * Roles con mínimo privilegio: admin, API, ETL (solo lectura)
---   * Datos personales visibles solo para el profesor (de sus grupos) y
---     el administrador
+--   * Datos personales visibles solo para el profesor (de sus grupos), el
+--     administrador y el propio alumno (solo los suyos; ajuste del 23 nov)
 -- Las LLAVES nunca están en la base ni en el código: la aplicación las lee
 -- de variables de entorno y las pone en la sesión con set_config(). Si una
 -- sesión no trae la llave, no puede cifrar, descifrar ni seudonimizar.
@@ -88,6 +88,28 @@ AS $$
     ORDER BY g.grupo_id, 5, 4;
 $$;
 
+-- Alumno: SUS propios datos personales, y de nadie más. No recibe
+-- parámetro: la API pone en la sesión el alumno_id del usuario autenticado
+-- (tomado del token, nunca de la petición) con
+--   SELECT set_config('sigaf.alumno_sesion', <alumno_id>, true);
+CREATE OR REPLACE FUNCTION fn_mis_datos()
+RETURNS TABLE (alumno_id BIGINT, nombre TEXT, apellidos TEXT)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = sigaf, public, pg_temp
+AS $$
+DECLARE
+    v_alumno BIGINT := nullif(current_setting('sigaf.alumno_sesion', true), '')::BIGINT;
+BEGIN
+    IF v_alumno IS NULL THEN
+        RAISE EXCEPTION 'No hay un alumno autenticado en la sesión' USING ERRCODE = '28000';
+    END IF;
+    RETURN QUERY
+        SELECT dp.alumno_id, fn_descifrar(dp.nombre_cifrado), fn_descifrar(dp.apellidos_cifrado)
+        FROM alumno_datos_personales dp
+        WHERE dp.alumno_id = v_alumno;
+END;
+$$;
+
 -- Administrador: datos personales de cualquier alumno.
 CREATE OR REPLACE FUNCTION fn_datos_alumno(p_alumno_id BIGINT)
 RETURNS TABLE (alumno_id BIGINT, matricula CHAR(64), nombre TEXT, apellidos TEXT)
@@ -162,7 +184,7 @@ GRANT SELECT ON rol, centro_academico, carrera, periodo, materia, directorio_fra
 TO sigaf_api;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA sigaf TO sigaf_api;
 GRANT EXECUTE ON FUNCTION
-    fn_seudonimizar(TEXT), fn_alumnos_de_profesor(BIGINT),
+    fn_seudonimizar(TEXT), fn_alumnos_de_profesor(BIGINT), fn_mis_datos(),
     fn_estado_entrega(TIMESTAMPTZ, TIMESTAMPTZ), fn_porcentaje_asistencia(BIGINT),
     fn_calificar_intento(BIGINT), fn_llave(TEXT)
 TO sigaf_api;

@@ -141,4 +141,25 @@ BEGIN
     RAISE NOTICE 'S8 OK: un rol sin permisos no ve nada del esquema';
 END $$;
 
+-- S9. El alumno ve SUS datos personales y los de nadie más
+DO $$
+BEGIN
+    BEGIN
+        PERFORM * FROM fn_mis_datos();
+        RAISE EXCEPTION 'S9 FALLÓ: devolvió datos sin alumno en la sesión';
+    EXCEPTION WHEN invalid_authorization_specification THEN
+        RAISE NOTICE 'S9a OK: sin alumno autenticado -> %', SQLERRM;
+    END;
+    PERFORM set_config('sigaf.alumno_sesion', '1', false);
+    ASSERT (SELECT count(*) FROM fn_mis_datos()) = 1, 'debe devolver solo un alumno';
+    ASSERT (SELECT apellidos FROM fn_mis_datos()) = 'Pérez Luna', 'no devolvió sus propios datos';
+    ASSERT NOT EXISTS (SELECT 1 FROM fn_mis_datos() WHERE alumno_id <> 1), 'devolvió datos de otro alumno';
+    PERFORM set_config('sigaf.alumno_sesion', '2', false);
+    ASSERT (SELECT apellidos FROM fn_mis_datos()) = 'Soto Vega', 'el alumno 2 no vio los suyos';
+    ASSERT pg_temp.puede('sigaf_api', 'SELECT * FROM sigaf.fn_mis_datos()'), 'la API no puede usarla';
+    ASSERT NOT pg_temp.puede('sigaf_etl', 'SELECT * FROM sigaf.fn_mis_datos()'), 'el ETL la usó';
+    PERFORM set_config('sigaf.alumno_sesion', '', false);
+    RAISE NOTICE 'S9b OK: cada alumno ve solo sus propios datos personales';
+END $$;
+
 \echo '== Todas las pruebas de seguridad pasaron =='
