@@ -1,0 +1,33 @@
+# =====================================================================
+# SIGAF · infra/postgres/patroni_seguridad.yml  (issue #6)
+# Fragmento para que alex lo integre en la configuración de Patroni (#9):
+# mismo TLS y mismo pg_hba que en postgresql_tls.conf y pg_hba.conf.
+# Las contraseñas NO van aquí: Patroni las lee de variables de entorno
+# (PATRONI_REPLICATION_PASSWORD, PATRONI_SUPERUSER_PASSWORD).
+# =====================================================================
+postgresql:
+  parameters:
+    ssl: "on"
+    ssl_cert_file: /certs/nodo.crt
+    ssl_key_file: /certs/nodo.key
+    ssl_ca_file: /certs/ca.crt
+    ssl_min_protocol_version: TLSv1.2
+    password_encryption: scram-sha-256
+    log_connections: "on"
+    log_disconnections: "on"
+    log_statement: ddl
+  authentication:
+    replication:
+      username: sigaf_replicador
+      sslmode: verify-full
+      sslrootcert: /certs/ca.crt
+  pg_hba:
+    - local all postgres peer
+    - host all sigaf_dba 127.0.0.1/32 scram-sha-256
+    - hostssl replication sigaf_replicador 192.168.0.0/16 scram-sha-256
+    - hostssl replication sigaf_replicador 10.8.0.0/24 scram-sha-256
+    - hostssl all sigaf_api_svc 0.0.0.0/0 scram-sha-256
+    - hostssl all sigaf_etl_svc 0.0.0.0/0 scram-sha-256
+    - hostssl all sigaf_dba 0.0.0.0/0 scram-sha-256
+    - hostnossl all all 0.0.0.0/0 reject
+    - host all all 0.0.0.0/0 reject
