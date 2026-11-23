@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  api:
+    name: API (FastAPI)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements*.txt
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt
+      - name: Estilo (ruff)
+        run: ruff check .
+      - name: Seguridad estática (bandit)
+        run: bandit -r app -c pyproject.toml
+      - name: Revisión de dependencias (pip-audit)
+        run: pip-audit -r requirements.txt
+      - name: Pruebas con cobertura mínima 60 %
+        run: pytest -q
+
+  app:
+    name: App (Flutter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Revisar si ya existe la app
+        id: check
+        run: |
+          if [ -f app/pubspec.yaml ]; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.check.outputs.exists == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - if: steps.check.outputs.exists == 'true'
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - if: steps.check.outputs.exists != 'true'
+        run: echo "Todavía no hay app/pubspec.yaml; se omite Flutter."

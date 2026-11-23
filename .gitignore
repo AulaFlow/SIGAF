@@ -1,0 +1,38 @@
+# Secretos (nunca subir)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.iml
+.idea/
+android/.gradle/
+android/local.properties
+ios/Pods/
+ios/.symlinks/
+
+# Datos generados y Docker
+*.log
+pgdata/
+mongodata/
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
