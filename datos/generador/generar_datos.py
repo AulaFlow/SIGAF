@@ -5,9 +5,14 @@ registros, para que la fragmentación, la replicación y el monitoreo se
 puedan observar con carga real. Ningún dato corresponde a personas reales:
 nombres generados con Faker y matrículas aleatorias (seudónimos).
 
-Uso (la contraseña va en una variable de entorno, nunca en el código):
+Uso (contraseña y llaves en variables de entorno, nunca en el código):
     export PGPASSWORD=dev
+    export SIGAF_LLAVE_DATOS=...        # 32+ caracteres, cifra nombre y apellidos
+    export SIGAF_LLAVE_SEUDONIMO=...    # 32+ caracteres, seudonimiza matrículas
     python generar_datos.py --limpiar
+
+Las matrículas se guardan seudonimizadas (HMAC) y los nombres cifrados,
+con las mismas funciones de la base (db/05_seguridad.sql).
 
 El script NO llena ``directorio_fragmento``: qué centro va a cada fragmento
 es una decisión del equipo. Al final imprime el conteo por centro para
@@ -186,7 +191,7 @@ def personas(cur: psycopg.Cursor, ctx: Contexto, fake: Faker, rng: random.Random
         for _ in range(alumnos_centro):
             carrera_id = rng.choice(carreras_por_centro[centro_id])
             matricula = matricula_unica(rng, usadas)
-            correo = f"{matricula.lower()}@sigaf.test"
+            correo = f"alumno{len(usadas):05d}@sigaf.test"   # sin la matrícula: no se filtra
             cur.execute(
                 "INSERT INTO usuario (correo, hash_contrasena, rol_id) VALUES (%s, %s, 1) RETURNING usuario_id",
                 (correo, hash_sintetico(correo)),
@@ -194,13 +199,13 @@ def personas(cur: psycopg.Cursor, ctx: Contexto, fake: Faker, rng: random.Random
             usuario_id = cur.fetchone()[0]
             cur.execute(
                 "INSERT INTO alumno (usuario_id, carrera_id, matricula, semestre) "
-                "VALUES (%s, %s, %s, %s) RETURNING alumno_id",
+                "VALUES (%s, %s, fn_seudonimizar(%s), %s) RETURNING alumno_id",
                 (usuario_id, carrera_id, matricula, rng.randint(1, 9)),
             )
             alumno_id = cur.fetchone()[0]
-            # Fragmentación vertical: los datos personales van en su propia tabla
+            # Fragmentación vertical + cifrado: el procedimiento los guarda cifrados
             cur.execute(
-                "INSERT INTO alumno_datos_personales (alumno_id, nombre, apellidos) VALUES (%s, %s, %s)",
+                "CALL sp_guardar_datos_personales(%s, %s, %s)",
                 (alumno_id, fake.first_name(), f"{fake.last_name()} {fake.last_name()}"),
             )
             ctx.alumnos.append((alumno_id, usuario_id, carrera_id))
@@ -403,9 +408,18 @@ def main(argv: list[str] | None = None) -> int:
     ctx = Contexto()
     inicio = time.perf_counter()
 
+    llaves = {n: os.environ.get(v, "") for n, v in
+              (("llave_datos", "SIGAF_LLAVE_DATOS"), ("llave_seudonimo", "SIGAF_LLAVE_SEUDONIMO"))}
+    if any(len(v) < 32 for v in llaves.values()):
+        print("Faltan SIGAF_LLAVE_DATOS y SIGAF_LLAVE_SEUDONIMO (32+ caracteres cada una).",
+              file=sys.stderr)
+        return 2
+
     try:
-        with psycopg.connect(args.dsn, options="-c search_path=sigaf") as conn, \
+        with psycopg.connect(args.dsn, options="-c search_path=sigaf,public") as conn, \
                 conn.cursor() as cur:
+            for nombre, valor in llaves.items():
+                cur.execute("SELECT set_config(%s, %s, false)", (f"sigaf.{nombre}", valor))
             cur.execute("SELECT count(*) FROM centro_academico")
             if cur.fetchone()[0] and not args.limpiar:
                 raise GeneradorError("La base ya tiene datos. Usa --limpiar para vaciarla.")

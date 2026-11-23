@@ -10,11 +10,18 @@ fragmentación, la replicación y el monitoreo con carga real.
 cd datos/generador
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-export PGPASSWORD=dev          # la contraseña nunca va en el código
+export PGPASSWORD=dev                       # la contraseña nunca va en el código
+export SIGAF_LLAVE_DATOS="$(openssl rand -hex 32)"       # cifra nombre y apellidos
+export SIGAF_LLAVE_SEUDONIMO="$(openssl rand -hex 32)"   # seudonimiza matrículas
 python generar_datos.py --limpiar
 ```
 
-Antes hay que crear el esquema (`db/01_tablas.sql`, `02_indices.sql`, `03_funciones_triggers.sql`).
+Antes hay que crear el esquema (`db/01_tablas.sql`, `02_indices.sql`,
+`03_funciones_triggers.sql` y `05_seguridad.sql`).
+
+Las matrículas se guardan seudonimizadas (HMAC) y los nombres cifrados (AES-256).
+**Guarda las dos llaves**: sin la misma `SIGAF_LLAVE_DATOS` no se pueden volver a leer
+los nombres, y sin la misma `SIGAF_LLAVE_SEUDONIMO` un alumno no podría iniciar sesión.
 
 | Opción | Default | Para qué |
 |---|---|---|
