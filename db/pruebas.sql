@@ -8,10 +8,14 @@
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/01_tablas.sql
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/02_indices.sql
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/03_funciones_triggers.sql
+--   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/05_seguridad.sql
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/pruebas.sql
 -- Para repetir desde cero:  DROP SCHEMA sigaf CASCADE;
 -- =====================================================================
-SET search_path TO sigaf;
+SET search_path TO sigaf, public;
+-- Llaves SOLO DE PRUEBA (en el sistema real vienen de variables de entorno)
+SELECT set_config('sigaf.llave_datos',     'llave-de-prueba-datos-0123456789abcdef', false),
+       set_config('sigaf.llave_seudonimo', 'llave-de-prueba-seudonimo-0123456789ab', false) \gset
 \echo '== Datos de prueba =='
 
 INSERT INTO rol (nombre) VALUES ('alumno'), ('profesor'), ('administrador');
@@ -58,18 +62,18 @@ INSERT INTO usuario (correo, hash_contrasena, rol_id) VALUES
 INSERT INTO profesor (usuario_id, centro_academico_id, num_empleado, nombre, apellidos) VALUES
     (2, 1, 'E-0001', 'Laura', 'Méndez Ruiz');
 
+-- La matrícula se guarda seudonimizada (HMAC); la real no queda en la base
 INSERT INTO alumno (usuario_id, carrera_id, matricula, semestre) VALUES
-    (3, 1, 'A000001', 7),
-    (4, 1, 'A000002', 7),
-    (5, 2, 'A000003', 3),
-    (6, 1, 'A000004', 7);
+    (3, 1, fn_seudonimizar('A000001'), 7),
+    (4, 1, fn_seudonimizar('A000002'), 7),
+    (5, 2, fn_seudonimizar('A000003'), 3),
+    (6, 1, fn_seudonimizar('A000004'), 7);
 
--- Fragmento vertical: datos personales aparte
-INSERT INTO alumno_datos_personales (alumno_id, nombre, apellidos) VALUES
-    (1, 'Diego',   'Pérez Luna'),
-    (2, 'Mariana', 'Soto Vega'),
-    (3, 'Iván',    'Ríos Campos'),
-    (4, 'Ana',     'Gil Mora');
+-- Fragmento vertical: datos personales aparte y cifrados
+CALL sp_guardar_datos_personales(1, 'Diego',   'Pérez Luna');
+CALL sp_guardar_datos_personales(2, 'Mariana', 'Soto Vega');
+CALL sp_guardar_datos_personales(3, 'Iván',    'Ríos Campos');
+CALL sp_guardar_datos_personales(4, 'Ana',     'Gil Mora');
 
 -- centro_academico_id NO se manda: lo llena trg_grupo_centro
 INSERT INTO grupo (materia_id, profesor_id, periodo_id, clave, cupo) VALUES
@@ -266,7 +270,8 @@ BEGIN
                          AND column_name IN ('nombre', 'apellidos')), 'alumno todavía tiene nombre';
     ASSERT (SELECT count(*) FROM alumno) = (SELECT count(*) FROM alumno_datos_personales),
         'no todos los alumnos tienen datos personales';
-    RAISE NOTICE 'P13 OK: datos personales separados de los académicos';
+    ASSERT (SELECT apellidos FROM fn_datos_alumno(1)) = 'Pérez Luna', 'no se pudo descifrar';
+    RAISE NOTICE 'P13 OK: datos personales separados de los académicos (y cifrados)';
 END $$;
 
 \echo '== Todas las pruebas pasaron =='
