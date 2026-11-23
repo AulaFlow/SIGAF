@@ -207,12 +207,16 @@ def personas(cur: psycopg.Cursor, ctx: Contexto, fake: Faker, rng: random.Random
 
 
 def grupos_e_inscripciones(cur: psycopg.Cursor, ctx: Contexto, rng: random.Random) -> None:
-    """Cada alumno lleva MATERIAS_POR_ALUMNO materias de su carrera por periodo."""
-    for periodo_id in ctx.periodos.values():
+    """Cada alumno lleva MATERIAS_POR_ALUMNO materias de su carrera por periodo,
+    sin repetir en el periodo actual las que ya cursó en el anterior."""
+    cursadas: dict[int, set[int]] = defaultdict(set)        # alumno -> materias
+    for periodo_id in ctx.periodos.values():                 # en orden: pasado, actual
         demanda: dict[int, list[int]] = defaultdict(list)   # materia -> alumnos
         for alumno_id, _, carrera_id in ctx.alumnos:
-            for materia_id in rng.sample(ctx.materias[carrera_id], MATERIAS_POR_ALUMNO):
+            disponibles = [m for m in ctx.materias[carrera_id] if m not in cursadas[alumno_id]]
+            for materia_id in rng.sample(disponibles, MATERIAS_POR_ALUMNO):
                 demanda[materia_id].append(alumno_id)
+                cursadas[alumno_id].add(materia_id)
 
         ctx.grupos[periodo_id] = []
         inscripciones: list[tuple[int, int]] = []
