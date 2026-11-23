@@ -2,9 +2,12 @@
 -- SIGAF · db/01_tablas.sql
 -- Tablas con PK, FK, CHECK y UNIQUE (PostgreSQL 16), más las vistas.
 -- Forma normal objetivo: 3FN. Redundancias intencionales:
---   * centro_academico_id copiado en grupo, inscripcion y calificacion:
---     es la shard key; así cada fila sabe a qué fragmento pertenece sin
---     hacer JOIN (se llena sola por trigger, ver 03).
+--   * centro_academico_id copiado en grupo, inscripcion, calificacion,
+--     entrega y asistencia: es la shard key. Fragmentación horizontal
+--     DERIVADA (decisión 2 del equipo): todo lo de un alumno en un grupo
+--     vive en el fragmento de su centro. Se llena sola por trigger (ver 03).
+-- Fragmentación VERTICAL (decisión 3 del equipo): los datos personales
+-- del alumno están en alumno_datos_personales, separados de los académicos.
 --   * inscripcion.promedio_parciales: lo mantiene trg_recalcular_promedio.
 -- Orden de ejecución: 01_tablas -> 02_indices -> 03_funciones_triggers
 -- =====================================================================
@@ -75,14 +78,22 @@ CREATE TABLE materia (
     semestre_sugerido  SMALLINT CHECK (semestre_sugerido BETWEEN 1 AND 12)
 );
 
+-- Fragmento vertical 1: datos académicos del alumno (los usa todo el sistema).
 CREATE TABLE alumno (
     alumno_id    BIGSERIAL PRIMARY KEY,
     usuario_id   BIGINT NOT NULL UNIQUE REFERENCES usuario (usuario_id),
     carrera_id   INT NOT NULL REFERENCES carrera (carrera_id),
     matricula    VARCHAR(12) NOT NULL UNIQUE,            -- sintética / seudonimizada
-    nombre       VARCHAR(80) NOT NULL,
-    apellidos    VARCHAR(120) NOT NULL,
     semestre     SMALLINT NOT NULL CHECK (semestre BETWEEN 1 AND 12)
+);
+
+-- Fragmento vertical 2: datos personales del alumno. Misma PK que alumno
+-- (relación 1 a 1). Solo la leen los roles que la necesitan (ver roles en
+-- Seguridad); las vistas y consultas académicas no la tocan.
+CREATE TABLE alumno_datos_personales (
+    alumno_id    BIGINT PRIMARY KEY REFERENCES alumno (alumno_id) ON DELETE CASCADE,
+    nombre       VARCHAR(80) NOT NULL,
+    apellidos    VARCHAR(120) NOT NULL
 );
 
 CREATE TABLE profesor (
@@ -146,6 +157,7 @@ CREATE TABLE entrega (
     entrega_id            BIGSERIAL PRIMARY KEY,
     tarea_id              BIGINT NOT NULL REFERENCES tarea (tarea_id),
     inscripcion_id        BIGINT NOT NULL REFERENCES inscripcion (inscripcion_id),
+    centro_academico_id   SMALLINT NOT NULL REFERENCES centro_academico (centro_academico_id),
     entregada_en          TIMESTAMPTZ NOT NULL DEFAULT now(),
     archivo_ruta          VARCHAR(255),
     archivo_tamano_bytes  BIGINT CHECK (archivo_tamano_bytes BETWEEN 1 AND 52428800), -- máx. 50 MB
@@ -207,8 +219,8 @@ CREATE TABLE respuesta (
 
 -- ---------------------------------------------------------------------
 -- Calificaciones y asistencias
--- calificacion es la tabla que se fragmenta horizontalmente por
--- centro_academico_id (fragmento A / B).
+-- Se fragmentan junto con inscripcion y entrega por centro_academico_id
+-- (fragmento A / B).
 -- ---------------------------------------------------------------------
 CREATE TABLE calificacion (
     calificacion_id      BIGSERIAL PRIMARY KEY,
@@ -236,11 +248,12 @@ CREATE TABLE bitacora_calificacion (
 );
 
 CREATE TABLE asistencia (
-    asistencia_id   BIGSERIAL PRIMARY KEY,
-    inscripcion_id  BIGINT NOT NULL REFERENCES inscripcion (inscripcion_id),
-    fecha           DATE NOT NULL,
-    estado          VARCHAR(12) NOT NULL
-                    CHECK (estado IN ('presente', 'falta', 'retardo', 'justificada')),
+    asistencia_id        BIGSERIAL PRIMARY KEY,
+    inscripcion_id       BIGINT NOT NULL REFERENCES inscripcion (inscripcion_id),
+    centro_academico_id  SMALLINT NOT NULL REFERENCES centro_academico (centro_academico_id),
+    fecha                DATE NOT NULL,
+    estado               VARCHAR(12) NOT NULL
+                         CHECK (estado IN ('presente', 'falta', 'retardo', 'justificada')),
     UNIQUE (inscripcion_id, fecha)
 );
 

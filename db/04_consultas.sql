@@ -98,12 +98,14 @@ ORDER BY g.grupo_id;
 
 -- C9. Lista de alumnos de un grupo con su promedio y asistencia
 -- Quién: profesor · Frecuencia: alta · Centro: 1 centro
-SELECT a.matricula, a.apellidos, a.nombre, i.promedio_parciales,
+-- Lee el fragmento vertical de datos personales: solo rol profesor/admin.
+SELECT a.matricula, dp.apellidos, dp.nombre, i.promedio_parciales,
        fn_porcentaje_asistencia(i.inscripcion_id) AS asistencia_pct
 FROM inscripcion i
-JOIN alumno a ON a.alumno_id = i.alumno_id
+JOIN alumno a                   ON a.alumno_id = i.alumno_id
+JOIN alumno_datos_personales dp ON dp.alumno_id = a.alumno_id
 WHERE i.grupo_id = 1 AND i.estado = 'activa'
-ORDER BY a.apellidos, a.nombre;
+ORDER BY dp.apellidos, dp.nombre;
 
 -- C10. Promedio por centro académico (indicador institucional)
 -- Quién: administrador · Frecuencia: baja (reportes) · Centro: GLOBAL

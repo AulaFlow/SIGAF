@@ -208,9 +208,10 @@ CREATE TRIGGER trg_intento_validar
 BEFORE INSERT ON intento_examen
 FOR EACH ROW EXECUTE FUNCTION fn_intento_validar();
 
--- 2.6 Shard key: centro_academico_id se hereda solo del padre para que
--- nunca quede inconsistente (grupo <- materia/carrera, inscripcion <- grupo,
--- calificacion <- inscripcion). La API no tiene que mandarlo.
+-- 2.6 Shard key (fragmentación derivada, decisión 2 del equipo):
+-- centro_academico_id se hereda solo del padre para que nunca quede
+-- inconsistente: grupo <- materia/carrera, inscripcion <- grupo, y
+-- calificacion, entrega y asistencia <- inscripcion. La API no lo manda.
 CREATE OR REPLACE FUNCTION fn_heredar_centro()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -223,7 +224,7 @@ BEGIN
     ELSIF TG_TABLE_NAME = 'inscripcion' THEN
         SELECT centro_academico_id INTO NEW.centro_academico_id
         FROM grupo WHERE grupo_id = NEW.grupo_id;
-    ELSIF TG_TABLE_NAME = 'calificacion' THEN
+    ELSIF TG_TABLE_NAME IN ('calificacion', 'entrega', 'asistencia') THEN
         SELECT centro_academico_id INTO NEW.centro_academico_id
         FROM inscripcion WHERE inscripcion_id = NEW.inscripcion_id;
     END IF;
@@ -241,6 +242,14 @@ FOR EACH ROW EXECUTE FUNCTION fn_heredar_centro();
 
 CREATE TRIGGER trg_calificacion_centro
 BEFORE INSERT OR UPDATE OF inscripcion_id ON calificacion
+FOR EACH ROW EXECUTE FUNCTION fn_heredar_centro();
+
+CREATE TRIGGER trg_entrega_centro
+BEFORE INSERT OR UPDATE OF inscripcion_id ON entrega
+FOR EACH ROW EXECUTE FUNCTION fn_heredar_centro();
+
+CREATE TRIGGER trg_asistencia_centro
+BEFORE INSERT OR UPDATE OF inscripcion_id ON asistencia
 FOR EACH ROW EXECUTE FUNCTION fn_heredar_centro();
 
 -- =====================================================================

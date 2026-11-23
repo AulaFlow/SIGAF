@@ -21,6 +21,7 @@ CREATE INDEX idx_inscripcion_centro    ON inscripcion (centro_academico_id);
 CREATE INDEX idx_tarea_grupo_limite    ON tarea (grupo_id, fecha_limite);
 CREATE INDEX idx_entrega_inscripcion   ON entrega (inscripcion_id);
 CREATE INDEX idx_entrega_sin_calificar ON entrega (tarea_id) WHERE calificacion IS NULL;
+CREATE INDEX idx_entrega_centro        ON entrega (centro_academico_id);
 
 -- Exámenes por grupo e intentos por alumno
 CREATE INDEX idx_examen_grupo          ON examen (grupo_id, abre_en);
@@ -32,6 +33,10 @@ CREATE INDEX idx_bitacora_calificacion ON bitacora_calificacion (calificacion_id
 
 -- Pase de lista por fecha
 CREATE INDEX idx_asistencia_fecha      ON asistencia (fecha);
+CREATE INDEX idx_asistencia_centro     ON asistencia (centro_academico_id);
+
+-- Búsqueda de alumnos por apellido (solo roles con acceso a datos personales)
+CREATE INDEX idx_alumno_dp_apellidos   ON alumno_datos_personales (apellidos, nombre);
 
 -- Avisos recientes por grupo y mensajes de una conversación
 CREATE INDEX idx_aviso_grupo_fecha     ON aviso (grupo_id, publicado_en DESC);

@@ -16,7 +16,8 @@ SET search_path TO sigaf;
 
 INSERT INTO rol (nombre) VALUES ('alumno'), ('profesor'), ('administrador');
 
--- 6 centros académicos (propuesta) y su fragmento
+-- 6 centros académicos y su fragmento (reparto PROVISIONAL decidido por el
+-- equipo: A = CCB, CCSH, CCA · B = CCEA, CCS, CCDC)
 INSERT INTO centro_academico (clave, nombre) VALUES
     ('CCB',  'Centro de Ciencias Básicas'),
     ('CCEA', 'Centro de Ciencias Económicas y Administrativas'),
@@ -26,12 +27,12 @@ INSERT INTO centro_academico (clave, nombre) VALUES
     ('CCDC', 'Centro de Ciencias del Diseño y de la Construcción');
 
 INSERT INTO directorio_fragmento (centro_academico_id, fragmento, host_primario, host_replica) VALUES
-    (1, 'A', 'laptop1:5432', 'laptop3:5432'),
-    (2, 'A', 'laptop1:5432', 'laptop3:5432'),
-    (3, 'A', 'laptop1:5432', 'laptop3:5432'),
-    (4, 'B', 'laptop2:5432', 'laptop4:5432'),
-    (5, 'B', 'laptop2:5432', 'laptop4:5432'),
-    (6, 'B', 'laptop2:5432', 'laptop4:5432');
+    (1, 'A', 'laptop1:5432', 'laptop3:5432'),   -- CCB
+    (2, 'B', 'laptop2:5432', 'laptop4:5432'),   -- CCEA
+    (3, 'A', 'laptop1:5432', 'laptop3:5432'),   -- CCA
+    (4, 'B', 'laptop2:5432', 'laptop4:5432'),   -- CCS
+    (5, 'A', 'laptop1:5432', 'laptop3:5432'),   -- CCSH
+    (6, 'B', 'laptop2:5432', 'laptop4:5432');   -- CCDC
 
 INSERT INTO carrera (centro_academico_id, clave, nombre) VALUES
     (1, 'ISC', 'Ingeniería en Sistemas Computacionales'),
@@ -57,11 +58,18 @@ INSERT INTO usuario (correo, hash_contrasena, rol_id) VALUES
 INSERT INTO profesor (usuario_id, centro_academico_id, num_empleado, nombre, apellidos) VALUES
     (2, 1, 'E-0001', 'Laura', 'Méndez Ruiz');
 
-INSERT INTO alumno (usuario_id, carrera_id, matricula, nombre, apellidos, semestre) VALUES
-    (3, 1, 'A000001', 'Diego',   'Pérez Luna',  7),
-    (4, 1, 'A000002', 'Mariana', 'Soto Vega',   7),
-    (5, 2, 'A000003', 'Iván',    'Ríos Campos', 3),
-    (6, 1, 'A000004', 'Ana',     'Gil Mora',    7);
+INSERT INTO alumno (usuario_id, carrera_id, matricula, semestre) VALUES
+    (3, 1, 'A000001', 7),
+    (4, 1, 'A000002', 7),
+    (5, 2, 'A000003', 3),
+    (6, 1, 'A000004', 7);
+
+-- Fragmento vertical: datos personales aparte
+INSERT INTO alumno_datos_personales (alumno_id, nombre, apellidos) VALUES
+    (1, 'Diego',   'Pérez Luna'),
+    (2, 'Mariana', 'Soto Vega'),
+    (3, 'Iván',    'Ríos Campos'),
+    (4, 'Ana',     'Gil Mora');
 
 -- centro_academico_id NO se manda: lo llena trg_grupo_centro
 INSERT INTO grupo (materia_id, profesor_id, periodo_id, clave, cupo) VALUES
@@ -236,6 +244,31 @@ BEGIN
     RAISE NOTICE 'P11 OK: situación académica correcta (no cuenta finales sin validar)';
 END $$;
 
+-- P12. Fragmentación derivada: entrega y asistencia heredan el centro de su inscripción
+DO $$
+BEGIN
+    INSERT INTO asistencia (inscripcion_id, fecha, estado) VALUES (1, current_date, 'presente');
+    ASSERT NOT EXISTS (
+        SELECT 1 FROM entrega e JOIN inscripcion i USING (inscripcion_id)
+        WHERE e.centro_academico_id IS DISTINCT FROM i.centro_academico_id), 'entrega con otro centro';
+    ASSERT NOT EXISTS (
+        SELECT 1 FROM asistencia s JOIN inscripcion i USING (inscripcion_id)
+        WHERE s.centro_academico_id IS DISTINCT FROM i.centro_academico_id), 'asistencia con otro centro';
+    ASSERT (SELECT count(*) FROM entrega WHERE centro_academico_id = 1) = 2, 'faltan entregas en el centro 1';
+    RAISE NOTICE 'P12 OK: entrega y asistencia quedan en el mismo fragmento que su inscripción';
+END $$;
+
+-- P13. Fragmentación vertical: alumno ya no guarda nombre; los datos personales van aparte (1 a 1)
+DO $$
+BEGIN
+    ASSERT NOT EXISTS (SELECT 1 FROM information_schema.columns
+                       WHERE table_schema = 'sigaf' AND table_name = 'alumno'
+                         AND column_name IN ('nombre', 'apellidos')), 'alumno todavía tiene nombre';
+    ASSERT (SELECT count(*) FROM alumno) = (SELECT count(*) FROM alumno_datos_personales),
+        'no todos los alumnos tienen datos personales';
+    RAISE NOTICE 'P13 OK: datos personales separados de los académicos';
+END $$;
+
 \echo '== Todas las pruebas pasaron =='
 
 -- Resultados para la captura del documento
@@ -246,6 +279,6 @@ SELECT bitacora_id, calificacion_id, operacion, valor_anterior, valor_nuevo, cam
 FROM bitacora_calificacion ORDER BY 1;
 \echo '-- Situación académica'
 SELECT * FROM v_situacion_academica ORDER BY alumno_id;
-\echo '-- Directorio de fragmentos'
+\echo '-- Directorio de fragmentos (reparto provisional del equipo)'
 SELECT d.centro_academico_id, c.clave, d.fragmento, d.host_primario, d.host_replica
 FROM directorio_fragmento d JOIN centro_academico c USING (centro_academico_id) ORDER BY 1;
