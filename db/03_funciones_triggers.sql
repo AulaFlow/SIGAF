@@ -7,6 +7,8 @@
 --   Triggers:       trg_recalcular_promedio, trg_estado_entrega,
 --                   trg_bitacora_calificacion, trg_tarea_notificar,
 --                   trg_intento_validar y los de shard key (trg_*_centro)
+-- Nota: fn_trg_estado_entrega se reemplaza en 07_margen_entrega.sql
+--       (margen de entrega tardía por tarea; rechazo con SQLSTATE SG001).
 -- =====================================================================
 SET search_path TO sigaf;
 

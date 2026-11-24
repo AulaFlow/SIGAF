@@ -9,6 +9,7 @@
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/02_indices.sql
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/03_funciones_triggers.sql
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/05_seguridad.sql
+--   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/07_margen_entrega.sql
 --   psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f db/pruebas.sql
 -- Para repetir desde cero:  DROP SCHEMA sigaf CASCADE;
 -- =====================================================================
@@ -272,6 +273,88 @@ BEGIN
         'no todos los alumnos tienen datos personales';
     ASSERT (SELECT apellidos FROM fn_datos_alumno(1)) = 'Pérez Luna', 'no se pudo descifrar';
     RAISE NOTICE 'P13 OK: datos personales separados de los académicos (y cifrados)';
+END $$;
+
+-- P14. Margen de entrega tardía (db/07_margen_entrega.sql, regla del 23 nov 2026)
+--      a tiempo / tardía dentro del margen / rechazo SG001 / margen 0 / filas viejas
+DO $$
+DECLARE
+    v_estado VARCHAR;
+    t_ok BIGINT; t_tarde BIGINT; t_fuera BIGINT; t_cero BIGINT; t_vieja BIGINT;
+BEGIN
+    INSERT INTO tarea (grupo_id, titulo, publicada_en, fecha_limite)
+    VALUES (1, 'P14 a tiempo', now() - interval '5 days', now() + interval '1 day')
+    RETURNING tarea_id INTO t_ok;
+    INSERT INTO tarea (grupo_id, titulo, publicada_en, fecha_limite)
+    VALUES (1, 'P14 tardía', now() - interval '5 days', now() - interval '47 hours')
+    RETURNING tarea_id INTO t_tarde;
+    INSERT INTO tarea (grupo_id, titulo, publicada_en, fecha_limite)
+    VALUES (1, 'P14 fuera', now() - interval '5 days', now() - interval '49 hours')
+    RETURNING tarea_id INTO t_fuera;
+    INSERT INTO tarea (grupo_id, titulo, publicada_en, fecha_limite, margen_tardia)
+    VALUES (1, 'P14 margen 0', now() - interval '5 days', now() - interval '1 minute', interval '0')
+    RETURNING tarea_id INTO t_cero;
+    INSERT INTO tarea (grupo_id, titulo, publicada_en, fecha_limite)
+    VALUES (1, 'P14 fila vieja', now() - interval '5 days', now() - interval '3 days')
+    RETURNING tarea_id INTO t_vieja;
+
+    ASSERT (SELECT margen_tardia FROM tarea WHERE tarea_id = t_ok) = interval '48 hours',
+        'El margen por defecto debió ser 48 h';
+
+    -- a) antes del límite
+    INSERT INTO entrega (tarea_id, inscripcion_id) VALUES (t_ok, 1) RETURNING estado INTO v_estado;
+    ASSERT v_estado = 'a_tiempo', 'a) debió ser a_tiempo, quedó ' || v_estado;
+
+    -- b) 47 h tarde, dentro de las 48 h
+    INSERT INTO entrega (tarea_id, inscripcion_id) VALUES (t_tarde, 1) RETURNING estado INTO v_estado;
+    ASSERT v_estado = 'tardia', 'b) debió ser tardia, quedó ' || v_estado;
+
+    -- c) 49 h tarde: la base la rechaza con SG001
+    BEGIN
+        INSERT INTO entrega (tarea_id, inscripcion_id) VALUES (t_fuera, 1);
+        RAISE EXCEPTION 'P14c FALLÓ: aceptó una entrega fuera del margen';
+    EXCEPTION WHEN SQLSTATE 'SG001' THEN
+        RAISE NOTICE 'P14c rechazo -> %', SQLERRM;
+    END;
+
+    -- d) margen 0: un minuto tarde ya se rechaza
+    BEGIN
+        INSERT INTO entrega (tarea_id, inscripcion_id) VALUES (t_cero, 1);
+        RAISE EXCEPTION 'P14d FALLÓ: con margen 0 aceptó una entrega tarde';
+    EXCEPTION WHEN SQLSTATE 'SG001' THEN NULL;
+    END;
+    -- ...pero justo en el límite sí entra, como a tiempo
+    INSERT INTO entrega (tarea_id, inscripcion_id, entregada_en)
+    VALUES (t_cero, 1, (SELECT fecha_limite FROM tarea WHERE tarea_id = t_cero))
+    RETURNING estado INTO v_estado;
+    ASSERT v_estado = 'a_tiempo', 'd) en el límite exacto debió ser a_tiempo';
+
+    -- e) el margen no acepta valores negativos
+    BEGIN
+        UPDATE tarea SET margen_tardia = interval '-1 hour' WHERE tarea_id = t_ok;
+        RAISE EXCEPTION 'P14e FALLÓ: aceptó un margen negativo';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- f) filas ya existentes: el trigger solo revisa INSERT y UPDATE de entregada_en.
+    --    Simulamos una entrega vieja (72 h tarde, aceptada con un margen mayor)
+    UPDATE tarea SET margen_tardia = interval '5 days' WHERE tarea_id = t_vieja;
+    INSERT INTO entrega (tarea_id, inscripcion_id) VALUES (t_vieja, 1);
+    UPDATE tarea SET margen_tardia = interval '48 hours' WHERE tarea_id = t_vieja;
+    UPDATE entrega SET calificacion = 8.5, retroalimentacion = 'Bien'      -- no toca entregada_en
+    WHERE tarea_id = t_vieja AND inscripcion_id = 1;
+    BEGIN
+        UPDATE entrega SET entregada_en = now() WHERE tarea_id = t_vieja AND inscripcion_id = 1;
+        RAISE EXCEPTION 'P14f FALLÓ: un UPDATE de entregada_en fuera del margen pasó';
+    EXCEPTION WHEN SQLSTATE 'SG001' THEN NULL;
+    END;
+
+    -- g) pendientes: la tarea sigue visible hasta límite + margen
+    ASSERT EXISTS (SELECT 1 FROM v_pendientes_alumno
+                   WHERE tarea_id = t_fuera AND cierre_entrega = fecha_limite + margen_tardia),
+        'g) la vista de pendientes no trae cierre_entrega';
+
+    RAISE NOTICE 'P14 OK: a tiempo, tardía en 48 h, rechazo SG001, margen 0, CHECK y filas viejas intactas';
 END $$;
 
 \echo '== Todas las pruebas pasaron =='

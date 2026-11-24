@@ -33,9 +33,12 @@ ORDER BY h.dia_semana, h.hora_inicio;
 
 -- C2. Tareas pendientes del alumno (más próximas primero)
 -- Quién: alumno · Frecuencia: muy alta · Centro: 1 centro
-SELECT tarea_id, titulo, materia, fecha_limite
+-- Sigue pendiente mientras se pueda entregar: hasta fecha_limite + margen_tardia
+-- (07_margen_entrega.sql). solo_tardia = ya pasó el límite, entra como tardía.
+SELECT tarea_id, titulo, materia, fecha_limite, cierre_entrega,
+       fecha_limite < now() AS solo_tardia
 FROM v_pendientes_alumno
-WHERE alumno_id = 1 AND fecha_limite > now()
+WHERE alumno_id = 1 AND cierre_entrega > now()
 ORDER BY fecha_limite;
 
 -- C3. Entregas por revisar del profesor
