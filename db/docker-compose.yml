@@ -4,6 +4,7 @@
 #   pg-a1, pg-a2 ... fragmento A (CCB, CCSH, CCA): Patroni elige primario y réplica
 #   pg-b1, pg-b2 ... fragmento B (CCEA, CCS, CCDC)
 #   haproxy ........ puerta fija: 5432/5433 = A primario/réplica, 5434/5435 = B
+#   mongo .......... base de análisis (issue #8); la llena el ETL de datos/analitica
 #
 # Uso:  cd db && docker compose up -d --build
 #       docker compose exec pg-a1 patronictl list      (quién es primario)
@@ -86,6 +87,24 @@ services:
       - ./patroni/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on: [pg-a1, pg-a2, pg-b1, pg-b2]
 
+  # Análisis (issue #8): MongoDB con usuario y contraseña. Solo escucha en esta
+  # computadora (127.0.0.1); el ETL y la API lo ven por la red de Docker como mongo:27017.
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: sigaf
+      MONGO_INITDB_ROOT_PASSWORD: ${SIGAF_PASS_MONGO:?falta en .env}
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
 # La red usa 192.168.x para que coincida con el pg_hba.conf de Ricardo
 # (replicación solo desde 192.168.0.0/16 y la VPN 10.8.0.0/24).
 networks:
@@ -101,3 +120,4 @@ volumes:
   pg-a2:
   pg-b1:
   pg-b2:
+  mongo:
