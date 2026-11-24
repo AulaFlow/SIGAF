@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import psycopg
 
 from app.config import Configuracion
+from app.datos.postgres import BaseDeDatos
 
 LLAVE = "x" * 32
 
@@ -53,11 +54,28 @@ class ErrorBD(psycopg.DatabaseError):
 
 
 class CursorFalso:
+    """Guarda lo ejecutado y devuelve, en orden, las respuestas que le preparen."""
+
     def __init__(self) -> None:
         self.ejecutadas: list[tuple[str, tuple]] = []
+        self.respuestas: list[object] = []
+
+    def responder(self, *respuestas: object) -> CursorFalso:
+        self.respuestas.extend(respuestas)
+        return self
 
     def execute(self, sql: str, parametros: tuple = ()) -> None:
         self.ejecutadas.append((sql, parametros))
+
+    def fetchone(self) -> object:
+        return self.respuestas.pop(0)
+
+    def fetchall(self) -> object:
+        return self.respuestas.pop(0)
+
+    def sql_de_negocio(self) -> list[tuple[str, tuple]]:
+        """Lo ejecutado sin los set_config del inicio de la transacción."""
+        return [(sql, p) for sql, p in self.ejecutadas if "set_config" not in sql]
 
     def __enter__(self) -> CursorFalso:
         return self
@@ -73,7 +91,8 @@ class ConexionFalsa:
         self.rollbacks = 0
         self.cerrada = False
 
-    def cursor(self) -> CursorFalso:
+    def cursor(self, row_factory: object = None) -> CursorFalso:
+        self.row_factory = row_factory
         return self.cursor_falso
 
     def commit(self) -> None:
@@ -109,3 +128,10 @@ class PoolFalso:
 
     def close(self) -> None:
         self.cerrado = True
+
+
+def bd_falsa(*respuestas: object) -> tuple[BaseDeDatos, CursorFalso]:
+    """BaseDeDatos con pool falso; el cursor devolverá las respuestas en orden."""
+    pool = PoolFalso()
+    pool.conexion.cursor_falso.responder(*respuestas)
+    return BaseDeDatos(configuracion(), pool), pool.conexion.cursor_falso

@@ -13,7 +13,19 @@ app/
   dominio/excepciones.py  errores de negocio (sin HTTP)
   datos/postgres.py    DB-API 2.0 (psycopg 3) + pool: una transacción por operación
   datos/errores.py     SQLSTATE de PostgreSQL -> excepción de negocio
+  dominio/reglas.py    reglas puras (calificación 0-10, máx. 2 decimales)
+  esquemas/            Pydantic: entrada con extra="forbid" y tipos estrictos; salida para OpenAPI
+  repositorios/        el ÚNICO lugar con SQL (siempre con parámetros %s)
+  servicios/           casos de uso por rol: alumno, profesor, inscripciones
 ```
+
+Reglas que aplican los servicios:
+
+- `alumno_id` y `profesor_id` salen del usuario autenticado (objeto `Alumno`/`Profesor`), nunca de la petición.
+- El profesor solo ve y modifica SUS grupos; si no es suyo responde "no existe" (no revela datos ajenos).
+- La entrega no recibe `entregada_en`: la pone la base y el trigger decide `a_tiempo`, `tardia` o `SG001`.
+- Pendientes = tareas que todavía se pueden entregar (`cierre_entrega > now()`); `solo_tardia` avisa si ya pasó la fecha límite.
+- Tarea sin `margen_tardia_horas` usa el DEFAULT de la base (48 h); con margen, 0 a 8760 h.
 
 ## Variables de entorno
 

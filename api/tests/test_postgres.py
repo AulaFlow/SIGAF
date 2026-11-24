@@ -18,6 +18,14 @@ def bd(pool: PoolFalso) -> BaseDeDatos:
     return BaseDeDatos(configuracion(), pool)
 
 
+def test_filas_como_diccionario(bd, pool):
+    from psycopg.rows import dict_row
+
+    with bd.transaccion():
+        pass
+    assert pool.conexion.row_factory is dict_row
+
+
 def test_commit_y_regresa_al_pool(bd, pool):
     with bd.transaccion() as cur:
         cur.execute("SELECT 1")
@@ -94,3 +102,10 @@ def test_crear_pool_no_conecta_hasta_abrirlo():
         assert nuevo.closed      # open=False: el lifespan lo abre
     finally:
         nuevo.close()
+
+
+def test_incluso_interrupciones_hacen_rollback(bd, pool):
+    with pytest.raises(KeyboardInterrupt):
+        with bd.transaccion():
+            raise KeyboardInterrupt
+    assert pool.conexion.rollbacks == 1 and pool.devueltas == 1

@@ -21,6 +21,7 @@ from contextlib import contextmanager
 from typing import Protocol
 
 import psycopg
+from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
 from ..config import Configuracion
@@ -78,7 +79,7 @@ class BaseDeDatos:
         pool = self.pool_para(centro_academico_id)
         conexion = pool.getconn()
         try:
-            with conexion.cursor() as cur:
+            with conexion.cursor(row_factory=dict_row) as cur:   # filas como dict
                 for nombre, valor in self._variables_de_sesion(persona).items():
                     # Parámetros %s: el driver manda los valores aparte (nada de f-strings en SQL).
                     cur.execute("SELECT set_config(%s, %s, true)", (nombre, valor))
@@ -89,7 +90,7 @@ class BaseDeDatos:
             if traducido is None:
                 raise
             raise traducido from error
-        except Exception:
+        except BaseException:   # cualquier otra cosa (incluso Ctrl+C): rollback y se propaga
             conexion.rollback()
             raise
         else:

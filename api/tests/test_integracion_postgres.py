@@ -4,43 +4,29 @@ Se saltan si no hay SIGAF_PASS_API, así el CI (sin base) no falla.
 Ninguna deja cambios: todo termina en rollback.
 """
 
-import os
-from collections.abc import Iterator
-
 import pytest
 
-from app.config import Configuracion
-from app.datos.postgres import BaseDeDatos, crear_pool
 from app.dominio.excepciones import EntregaFueraDeTiempoError
 from app.dominio.personas import Alumno
+from tests.conftest import Revertir as _Revertir
+from tests.conftest import solo_con_base
 
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("SIGAF_PASS_API"), reason="sin SIGAF_PASS_API: se omite la base real"
-)
-
-
-class _Revertir(Exception):
-    """Se lanza a propósito para forzar el rollback."""
+pytestmark = solo_con_base
 
 
-@pytest.fixture(scope="module")
-def bd() -> Iterator[BaseDeDatos]:
-    config = Configuracion.desde_entorno()
-    pool = crear_pool(config)
-    pool.open(wait=True, timeout=10)
-    try:
-        yield BaseDeDatos(config, pool)
-    finally:
-        pool.close()
+@pytest.fixture
+def bd(bd_real):
+    return bd_real
 
 
 def test_sesion_con_tls_search_path_y_llaves(bd):
     with bd.transaccion() as cur:
-        cur.execute("SELECT current_user, current_setting('search_path'), "
-                    "(SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid())")
-        usuario, search_path, con_ssl = cur.fetchone()
-        cur.execute("SELECT length(fn_seudonimizar(%s))", ("A123456",))
-        assert cur.fetchone()[0] == 64
+        cur.execute("SELECT current_user AS usuario, current_setting('search_path') AS ruta, "
+                    "(SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()) AS con_ssl")
+        fila = cur.fetchone()
+        usuario, search_path, con_ssl = fila["usuario"], fila["ruta"], fila["con_ssl"]
+        cur.execute("SELECT length(fn_seudonimizar(%s)) AS largo", ("A123456",))
+        assert cur.fetchone()["largo"] == 64
     assert usuario == "sigaf_api_svc"
     assert search_path.startswith("sigaf")
     assert con_ssl is True
@@ -48,18 +34,19 @@ def test_sesion_con_tls_search_path_y_llaves(bd):
 
 def test_llave_de_datos_en_la_sesion(bd):
     with bd.transaccion() as cur:
-        cur.execute("SELECT current_setting('sigaf.llave_datos', true)")
-        assert len(cur.fetchone()[0]) >= 32
+        cur.execute("SELECT current_setting('sigaf.llave_datos', true) AS llave")
+        assert len(cur.fetchone()["llave"]) >= 32
 
 
 def test_alumno_solo_ve_sus_datos(bd):
     with bd.transaccion() as cur:
         cur.execute("SELECT alumno_id, usuario_id FROM alumno ORDER BY alumno_id LIMIT 1")
-        alumno_id, usuario_id = cur.fetchone()
+        fila = cur.fetchone()
+        alumno_id, usuario_id = fila["alumno_id"], fila["usuario_id"]
     with bd.transaccion(Alumno(usuario_id, "a@sigaf.test", alumno_id)) as cur:
         cur.execute("SELECT alumno_id FROM fn_mis_datos()")
         filas = cur.fetchall()
-    assert filas in ([(alumno_id,)], [])   # [] si ese alumno no tiene datos personales
+    assert filas in ([{"alumno_id": alumno_id}], [])   # [] si ese alumno no tiene datos personales
 
 
 def test_entrega_despues_del_margen_es_entrega_fuera_de_tiempo(bd):
@@ -79,21 +66,22 @@ def test_entrega_despues_del_margen_es_entrega_fuera_de_tiempo(bd):
         pytest.skip("no hay una tarea cerrada sin entrega para probar")
     with pytest.raises(EntregaFueraDeTiempoError, match="fuera de tiempo"):
         with bd.transaccion() as cur:
-            cur.execute("INSERT INTO entrega (tarea_id, inscripcion_id) VALUES (%s, %s)", caso)
+            cur.execute("INSERT INTO entrega (tarea_id, inscripcion_id) VALUES (%s, %s)",
+                        (caso["tarea_id"], caso["inscripcion_id"]))
 
 
 def test_rollback_no_deja_rastro(bd):
     with bd.transaccion() as cur:
-        cur.execute("SELECT count(*) FROM notificacion")
-        antes = cur.fetchone()[0]
+        cur.execute("SELECT count(*) AS total FROM notificacion")
+        antes = cur.fetchone()["total"]
     with pytest.raises(_Revertir):
         with bd.transaccion() as cur:
             cur.execute("SELECT usuario_id FROM usuario ORDER BY usuario_id LIMIT 1")
             cur.execute(
                 "INSERT INTO notificacion (usuario_id, tipo, texto) VALUES (%s, 'aviso', 'prueba')",
-                cur.fetchone(),
+                (cur.fetchone()["usuario_id"],),
             )
             raise _Revertir
     with bd.transaccion() as cur:
-        cur.execute("SELECT count(*) FROM notificacion")
-        assert cur.fetchone()[0] == antes
+        cur.execute("SELECT count(*) AS total FROM notificacion")
+        assert cur.fetchone()["total"] == antes
