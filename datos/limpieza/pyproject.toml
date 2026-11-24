@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--cov=limpieza --cov-report=term-missing --cov-fail-under=60"
+
+[tool.ruff]
+line-length = 110
+
+[tool.bandit]
+exclude_dirs = ["tests"]
