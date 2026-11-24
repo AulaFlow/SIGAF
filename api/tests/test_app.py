@@ -26,7 +26,7 @@ def test_lifespan_abre_y_cierra_el_pool():
     with TestClient(app) as client:
         assert pool.abierto and not pool.cerrado
         assert client.get("/_prueba_bd").json() == {"ok": True}
-        assert pool.conexion.commits == 1
+        assert pool.conexion.commits == 2   # 1 al leer directorio_fragmento + 1 de la ruta
     assert pool.cerrado
 
 

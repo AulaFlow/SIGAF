@@ -14,7 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from psycopg_pool import ConnectionPool
 
 from .config import Configuracion
-from .datos.postgres import BaseDeDatos, crear_pool
+from .datos.enrutador import crear_base_distribuida
+from .datos.postgres import crear_pool
 
 TIEMPO_ESPERA_POOL = 10   # segundos para conectar al arrancar
 
@@ -27,13 +28,20 @@ def crear_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        def abrir(pool: ConnectionPool) -> None:
+            pool.open(wait=True, timeout=TIEMPO_ESPERA_POOL)   # si la base no responde, no arranca
+
         pool = fabrica_pool(config)
-        pool.open(wait=True, timeout=TIEMPO_ESPERA_POOL)   # si la base no responde, no arranca
-        app.state.bd = BaseDeDatos(config, pool)
+        abrir(pool)
+        abiertos = [pool]
         try:
+            # Lee directorio_fragmento y abre un pool por fragmento (issue #6).
+            app.state.bd, nuevos = crear_base_distribuida(config, pool, fabrica_pool, abrir)
+            abiertos.extend(nuevos)
             yield
         finally:
-            pool.close()
+            for abierto in abiertos:
+                abierto.close()
 
     app = FastAPI(title="SIGAF API", version="0.1.0", lifespan=lifespan)
 
