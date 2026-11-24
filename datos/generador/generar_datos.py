@@ -308,7 +308,7 @@ def tareas_entregas_asistencia(cur: psycopg.Cursor, ctx: Contexto, rng: random.R
                 if rng.random() < 0.85:
                     a_tiempo = rng.random() < 0.8
                     cuando = limite - timedelta(hours=rng.randint(1, 90)) if a_tiempo \
-                        else limite + timedelta(hours=rng.randint(1, 48))
+                        else limite + timedelta(hours=rng.randint(1, 48))  # dentro del margen de 48 h (db/07)
                     calif = round(rng.uniform(5, 10), 1) if rng.random() < 0.7 else None
                     entregas.append((tarea_id, inscripcion_id, cuando,
                                      f"entregas/{tarea_id}/{inscripcion_id}.pdf",

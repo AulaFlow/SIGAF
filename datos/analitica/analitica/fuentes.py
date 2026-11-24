@@ -36,7 +36,7 @@ SQL_ACTIVIDAD = """
 SELECT i.alumno_id, p.clave, i.centro_academico_id, ca.clave,
        count(e.entrega_id) FILTER (WHERE e.estado = 'a_tiempo'),
        count(e.entrega_id) FILTER (WHERE e.estado = 'tardia'),
-       count(t.tarea_id)   FILTER (WHERE e.entrega_id IS NULL AND t.fecha_limite < now()),
+       count(t.tarea_id)   FILTER (WHERE e.entrega_id IS NULL AND t.fecha_limite + t.margen_tardia < now()),
        (SELECT count(*) FROM sigaf.asistencia s
           JOIN sigaf.inscripcion i3 USING (inscripcion_id)
           JOIN sigaf.grupo g3 ON g3.grupo_id = i3.grupo_id
