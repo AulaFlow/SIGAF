@@ -15,7 +15,9 @@
 -- llegan como parámetros (%s) para evitar inyección SQL.
 -- Para probar: correr después de pruebas.sql o del generador.
 -- =====================================================================
-SET search_path TO sigaf;
+SET search_path TO sigaf, public;
+-- Llave SOLO DE PRUEBA para descifrar nombres en C9 (la API usa la real)
+SELECT set_config('sigaf.llave_datos', 'llave-de-prueba-datos-0123456789abcdef', false) \gset
 
 -- C1. Horario del alumno
 -- Quién: alumno · Frecuencia: muy alta (varias veces al día) · Centro: 1 centro
@@ -96,16 +98,17 @@ WHERE g.profesor_id = 1
 GROUP BY g.grupo_id, m.nombre, g.clave
 ORDER BY g.grupo_id;
 
--- C9. Lista de alumnos de un grupo con su promedio y asistencia
+-- C9. Lista de alumnos de un grupo con nombre, promedio y asistencia
 -- Quién: profesor · Frecuencia: alta · Centro: 1 centro
--- Lee el fragmento vertical de datos personales: solo rol profesor/admin.
-SELECT a.matricula, dp.apellidos, dp.nombre, i.promedio_parciales,
+-- Los nombres están cifrados: solo se leen con fn_alumnos_de_profesor, que
+-- devuelve únicamente alumnos de los grupos de ESE profesor (requiere la
+-- llave de datos en la sesión).
+SELECT p.apellidos, p.nombre, i.promedio_parciales,
        fn_porcentaje_asistencia(i.inscripcion_id) AS asistencia_pct
-FROM inscripcion i
-JOIN alumno a                   ON a.alumno_id = i.alumno_id
-JOIN alumno_datos_personales dp ON dp.alumno_id = a.alumno_id
-WHERE i.grupo_id = 1 AND i.estado = 'activa'
-ORDER BY dp.apellidos, dp.nombre;
+FROM fn_alumnos_de_profesor(1) p
+JOIN inscripcion i ON i.alumno_id = p.alumno_id AND i.grupo_id = p.grupo_id
+WHERE p.grupo_id = 1
+ORDER BY p.apellidos, p.nombre;
 
 -- C10. Promedio por centro académico (indicador institucional)
 -- Quién: administrador · Frecuencia: baja (reportes) · Centro: GLOBAL

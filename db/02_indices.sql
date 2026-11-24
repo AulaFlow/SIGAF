@@ -35,9 +35,6 @@ CREATE INDEX idx_bitacora_calificacion ON bitacora_calificacion (calificacion_id
 CREATE INDEX idx_asistencia_fecha      ON asistencia (fecha);
 CREATE INDEX idx_asistencia_centro     ON asistencia (centro_academico_id);
 
--- Búsqueda de alumnos por apellido (solo roles con acceso a datos personales)
-CREATE INDEX idx_alumno_dp_apellidos   ON alumno_datos_personales (apellidos, nombre);
-
 -- Avisos recientes por grupo y mensajes de una conversación
 CREATE INDEX idx_aviso_grupo_fecha     ON aviso (grupo_id, publicado_en DESC);
 CREATE INDEX idx_mensaje_conv_fecha    ON mensaje (conversacion_id, enviado_en DESC);

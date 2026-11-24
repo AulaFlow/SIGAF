@@ -83,17 +83,20 @@ CREATE TABLE alumno (
     alumno_id    BIGSERIAL PRIMARY KEY,
     usuario_id   BIGINT NOT NULL UNIQUE REFERENCES usuario (usuario_id),
     carrera_id   INT NOT NULL REFERENCES carrera (carrera_id),
-    matricula    VARCHAR(12) NOT NULL UNIQUE,            -- sintética / seudonimizada
+    -- Seudónimo de la matrícula: HMAC-SHA256 con llave secreta (ver
+    -- fn_seudonimizar en 05_seguridad.sql). La matrícula real NO se guarda.
+    matricula    CHAR(64) NOT NULL UNIQUE,
     semestre     SMALLINT NOT NULL CHECK (semestre BETWEEN 1 AND 12)
 );
 
 -- Fragmento vertical 2: datos personales del alumno. Misma PK que alumno
--- (relación 1 a 1). Solo la leen los roles que la necesitan (ver roles en
--- Seguridad); las vistas y consultas académicas no la tocan.
+-- (relación 1 a 1). Nombre y apellidos van CIFRADOS (AES-256 con pgcrypto,
+-- ver fn_cifrar en 05_seguridad.sql). Solo el profesor (de sus grupos) y el
+-- administrador pueden descifrarlos; las vistas académicas no la tocan.
 CREATE TABLE alumno_datos_personales (
-    alumno_id    BIGINT PRIMARY KEY REFERENCES alumno (alumno_id) ON DELETE CASCADE,
-    nombre       VARCHAR(80) NOT NULL,
-    apellidos    VARCHAR(120) NOT NULL
+    alumno_id          BIGINT PRIMARY KEY REFERENCES alumno (alumno_id) ON DELETE CASCADE,
+    nombre_cifrado     BYTEA NOT NULL,
+    apellidos_cifrado  BYTEA NOT NULL
 );
 
 CREATE TABLE profesor (
