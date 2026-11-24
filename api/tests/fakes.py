@@ -53,11 +53,15 @@ class ErrorBD(psycopg.DatabaseError):
 
 
 class CursorFalso:
-    def __init__(self) -> None:
+    def __init__(self, filas: list[tuple] | None = None) -> None:
         self.ejecutadas: list[tuple[str, tuple]] = []
+        self.filas = filas or []          # lo que regresa fetchall()
 
     def execute(self, sql: str, parametros: tuple = ()) -> None:
         self.ejecutadas.append((sql, parametros))
+
+    def fetchall(self) -> list[tuple]:
+        return list(self.filas)
 
     def __enter__(self) -> CursorFalso:
         return self
@@ -67,8 +71,8 @@ class CursorFalso:
 
 
 class ConexionFalsa:
-    def __init__(self) -> None:
-        self.cursor_falso = CursorFalso()
+    def __init__(self, filas: list[tuple] | None = None) -> None:
+        self.cursor_falso = CursorFalso(filas)
         self.commits = 0
         self.rollbacks = 0
         self.cerrada = False
