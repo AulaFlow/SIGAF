@@ -11,6 +11,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import StrEnum
 
+from .excepciones import DatoInvalidoError, PermisoDenegadoError
+
 
 class Rol(StrEnum):
     ALUMNO = "alumno"
@@ -56,6 +58,13 @@ class Persona(ABC):
     def es(self, *roles: Rol) -> bool:
         return self.rol in roles
 
+    def alumno_a_inscribir(self, alumno_id: int | None) -> int:
+        """A quién puede inscribir esta persona (polimorfismo: cada rol responde distinto).
+
+        Por defecto nadie puede inscribir; Alumno y Administrador lo sobrescriben.
+        """
+        raise PermisoDenegadoError("Solo un alumno o un administrador pueden inscribir")
+
     def __repr__(self) -> str:   # sin el correo: no exponer datos en logs
         return f"{type(self).__name__}(usuario_id={self._usuario_id})"
 
@@ -77,6 +86,12 @@ class Alumno(Persona):
         # fn_mis_datos() lee esta variable: el alumno solo ve SUS datos.
         return {"sigaf.alumno_sesion": str(self._alumno_id)}
 
+    def alumno_a_inscribir(self, alumno_id: int | None) -> int:
+        # El alumno solo se inscribe a sí mismo: su id sale del token, no de la petición.
+        if alumno_id is not None and alumno_id != self._alumno_id:
+            raise PermisoDenegadoError("Un alumno solo puede inscribirse a sí mismo")
+        return self._alumno_id
+
 
 class Profesor(Persona):
     def __init__(self, usuario_id: int, correo: str, profesor_id: int) -> None:
@@ -96,3 +111,8 @@ class Administrador(Persona):
     @property
     def rol(self) -> Rol:
         return Rol.ADMINISTRADOR
+
+    def alumno_a_inscribir(self, alumno_id: int | None) -> int:
+        if alumno_id is None:
+            raise DatoInvalidoError("El administrador debe indicar alumno_id")
+        return alumno_id

@@ -39,8 +39,9 @@ class EntregaFueraDeTiempoError(ReglaDeNegocioError):
     """La entrega llegó después de fecha_limite + margen_tardia (SQLSTATE SG001)."""
 
 
-class DatoInvalidoError(SigafError):
-    """Un valor no cumple una restricción CHECK de la base."""
+class DatoInvalidoError(SigafError, ValueError):
+    """Un valor no es válido. También es ValueError: si se lanza dentro de un
+    validador de Pydantic, FastAPI responde 422 con el mensaje."""
 
 
 class CalificacionInvalidaError(DatoInvalidoError):

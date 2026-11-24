@@ -1,5 +1,6 @@
 import pytest
 
+from app.dominio.excepciones import DatoInvalidoError, PermisoDenegadoError
 from app.dominio.personas import Administrador, Alumno, Persona, Profesor, Rol
 
 
@@ -56,3 +57,23 @@ def test_encapsulamiento_y_repr_sin_correo():
     with pytest.raises(AttributeError):
         alumno.alumno_id = 99  # type: ignore[misc]
     assert repr(alumno) == "Alumno(usuario_id=10)"
+
+
+def test_alumno_solo_se_inscribe_a_si_mismo():
+    alumno = Alumno(1, "a@sigaf.test", alumno_id=7)
+    assert alumno.alumno_a_inscribir(None) == 7
+    assert alumno.alumno_a_inscribir(7) == 7
+    with pytest.raises(PermisoDenegadoError):
+        alumno.alumno_a_inscribir(8)
+
+
+def test_admin_inscribe_a_quien_indique():
+    admin = Administrador(1, "x@sigaf.test")
+    assert admin.alumno_a_inscribir(55) == 55
+    with pytest.raises(DatoInvalidoError):
+        admin.alumno_a_inscribir(None)
+
+
+def test_profesor_no_inscribe():
+    with pytest.raises(PermisoDenegadoError):
+        Profesor(1, "p@sigaf.test", 3).alumno_a_inscribir(7)
