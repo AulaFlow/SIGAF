@@ -12,9 +12,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from psycopg_pool import ConnectionPool
+from pymongo import MongoClient
 
 from .config import Configuracion
 from .datos.enrutador import crear_base_distribuida
+from .datos.mongo import crear_cliente_mongo
 from .datos.postgres import crear_pool
 
 TIEMPO_ESPERA_POOL = 10   # segundos para conectar al arrancar
@@ -23,6 +25,7 @@ TIEMPO_ESPERA_POOL = 10   # segundos para conectar al arrancar
 def crear_app(
     config: Configuracion | None = None,
     fabrica_pool: Callable[[Configuracion], ConnectionPool] = crear_pool,
+    fabrica_mongo: Callable[[Configuracion], MongoClient] = crear_cliente_mongo,
 ) -> FastAPI:
     config = config or Configuracion.desde_entorno()
 
@@ -34,6 +37,9 @@ def crear_app(
         pool = fabrica_pool(config)
         abrir(pool)
         abiertos = [pool]
+        mongo = fabrica_mongo(config)                     # analítica (no conecta aún)
+        app.state.mongo_db = mongo[config.mongo_db]
+        abiertos.append(mongo)
         try:
             # Lee directorio_fragmento y abre un pool por fragmento (issue #6).
             app.state.bd, nuevos = crear_base_distribuida(config, pool, fabrica_pool, abrir)

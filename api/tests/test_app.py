@@ -3,14 +3,15 @@ from fastapi.testclient import TestClient
 
 from app.dependencias import BD
 from app.main import crear_app
-from tests.fakes import PoolFalso, configuracion
+from tests.fakes import PoolFalso, configuracion, mongo_falso
 
 ORIGEN = "http://localhost:8080"
 
 
 def _app_con_pool_falso() -> tuple[FastAPI, PoolFalso]:
     pool = PoolFalso()
-    app = crear_app(configuracion(origenes_cors=(ORIGEN,)), fabrica_pool=lambda config: pool)
+    app = crear_app(configuracion(origenes_cors=(ORIGEN,)), fabrica_pool=lambda config: pool,
+                    fabrica_mongo=mongo_falso)
 
     @app.get("/_prueba_bd")
     def prueba(bd: BD) -> dict:
@@ -45,3 +46,9 @@ def test_openapi_disponible():
     app, _ = _app_con_pool_falso()
     with TestClient(app) as client:
         assert client.get("/openapi.json").json()["info"]["title"] == "SIGAF API"
+
+
+def test_lifespan_deja_lista_la_base_analitica():
+    app, _ = _app_con_pool_falso()
+    with TestClient(app):
+        assert app.state.mongo_db.name == "sigaf_analitica"

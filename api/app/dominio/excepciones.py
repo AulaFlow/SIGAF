@@ -46,3 +46,7 @@ class DatoInvalidoError(SigafError, ValueError):
 
 class CalificacionInvalidaError(DatoInvalidoError):
     """La calificación está fuera de 0 a 10 o no es válida."""
+
+
+class ServicioNoDisponibleError(SigafError):
+    """Una base de la que depende la operación no responde (p. ej. MongoDB)."""

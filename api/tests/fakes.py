@@ -143,3 +143,10 @@ def bd_falsa(*respuestas: object) -> tuple[BaseDeDatos, CursorFalso]:
     pool = PoolFalso()
     pool.conexion.cursor_falso.responder(*respuestas)
     return BaseDeDatos(configuracion(), pool), pool.conexion.cursor_falso
+
+
+def mongo_falso(config: Configuracion | None = None) -> object:
+    """Cliente de MongoDB en memoria (mongomock) para las pruebas de la app."""
+    import mongomock
+
+    return mongomock.MongoClient()

@@ -16,7 +16,7 @@ from app.datos.enrutador import (
 from app.datos.postgres import BaseDeDatos
 from app.dependencias import BD
 from app.main import crear_app
-from tests.fakes import ConexionFalsa, PoolFalso, configuracion
+from tests.fakes import ConexionFalsa, PoolFalso, configuracion, mongo_falso
 
 # Igual que db/pruebas.sql: A = CCB(1), CCA(3), CCSH(5) · B = CCEA(2), CCS(4), CCDC(6)
 DIRECTORIO = [
@@ -171,7 +171,7 @@ def test_lifespan_cierra_todos_los_pools():
         otros.append(PoolFalso())
         return otros[-1]
 
-    app = crear_app(configuracion(), fabrica_pool=fabrica)
+    app = crear_app(configuracion(), fabrica_pool=fabrica, fabrica_mongo=mongo_falso)
 
     @app.get("/_centro/{centro}")
     def ruta(centro: int, bd: BD) -> dict:

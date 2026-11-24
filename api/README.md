@@ -16,8 +16,25 @@ app/
   dominio/reglas.py    reglas puras (calificación 0-10, máx. 2 decimales)
   esquemas/            Pydantic: entrada con extra="forbid" y tipos estrictos; salida para OpenAPI
   repositorios/        el ÚNICO lugar con SQL (siempre con parámetros %s)
-  servicios/           casos de uso por rol: alumno, profesor, inscripciones
+  servicios/           casos de uso por rol: alumno, profesor, inscripciones, estadísticas
+  datos/mongo.py       lectura de MongoDB (pymongo): consultas y pipelines fijos
 ```
+
+### Estadísticas (MongoDB)
+
+Lee lo que dejó el ETL de `datos/analitica` en `sigaf_analitica`
+(consistencia **eventual**: cada respuesta trae `actualizado_en`).
+
+| Servicio | Quién | Colección |
+|---|---|---|
+| `mi_actividad` | el alumno (solo la suya) | `actividad_alumno` |
+| `resumen_de_grupo` | el profesor (solo sus grupos; se verifica en PostgreSQL) | `resumen_grupo` |
+| `distribucion` (rangos 0–10) | profesor y administrador | `historico_calificaciones` |
+| `promedio_por_materia` | profesor y administrador | `resumen_grupo` |
+| `entregas_por_centro` | profesor y administrador | `actividad_alumno` |
+
+Si MongoDB no responde, la API sigue funcionando y solo estas operaciones dan
+`ServicioNoDisponibleError` (503).
 
 Reglas que aplican los servicios:
 
