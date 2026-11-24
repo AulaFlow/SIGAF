@@ -54,10 +54,16 @@ class ErrorBD(psycopg.DatabaseError):
 
 
 class CursorFalso:
-    """Guarda lo ejecutado y devuelve, en orden, las respuestas que le preparen."""
+    """Guarda lo ejecutado y devuelve datos preparados.
 
-    def __init__(self) -> None:
+    - filas: lo que devuelve fetchall() siempre (lo usa el enrutador de alex, #6).
+    - responder(...): respuestas en orden para fetchone()/fetchall() (servicios);
+      si hay respuestas preparadas, tienen prioridad sobre filas.
+    """
+
+    def __init__(self, filas: list[tuple] | None = None) -> None:
         self.ejecutadas: list[tuple[str, tuple]] = []
+        self.filas = filas or []
         self.respuestas: list[object] = []
 
     def responder(self, *respuestas: object) -> CursorFalso:
@@ -71,7 +77,9 @@ class CursorFalso:
         return self.respuestas.pop(0)
 
     def fetchall(self) -> object:
-        return self.respuestas.pop(0)
+        if self.respuestas:
+            return self.respuestas.pop(0)
+        return list(self.filas)
 
     def sql_de_negocio(self) -> list[tuple[str, tuple]]:
         """Lo ejecutado sin los set_config del inicio de la transacción."""
@@ -85,8 +93,8 @@ class CursorFalso:
 
 
 class ConexionFalsa:
-    def __init__(self) -> None:
-        self.cursor_falso = CursorFalso()
+    def __init__(self, filas: list[tuple] | None = None) -> None:
+        self.cursor_falso = CursorFalso(filas)
         self.commits = 0
         self.rollbacks = 0
         self.cerrada = False
