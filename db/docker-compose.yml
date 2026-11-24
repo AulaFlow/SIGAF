@@ -1,0 +1,72 @@
+name: sigaf
+
+x-primario: &primario
+  image: postgres:16
+  restart: unless-stopped
+  environment:
+    POSTGRES_DB: sigaf
+    POSTGRES_USER: ${PG_USER}
+    POSTGRES_PASSWORD: ${PG_PASSWORD}
+    REPL_PASSWORD: ${REPL_PASSWORD}
+  command: postgres -c wal_level=replica -c max_wal_senders=5
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d sigaf"]
+    interval: 5s
+    retries: 20
+
+x-replica: &replica
+  image: postgres:16
+  restart: unless-stopped
+  user: postgres
+  entrypoint: ["bash", "/replica.sh"]
+
+services:
+  pg-a-primario:
+    <<: *primario
+    ports: ["5432:5432"]
+    volumes:
+      - pg-a-primario:/var/lib/postgresql/data
+      - ./docker/replicacion.sh:/docker-entrypoint-initdb.d/00_replicacion.sh:ro
+      - ./01_tablas.sql:/docker-entrypoint-initdb.d/01_tablas.sql:ro
+      - ./02_indices.sql:/docker-entrypoint-initdb.d/02_indices.sql:ro
+      - ./03_funciones_triggers.sql:/docker-entrypoint-initdb.d/03_funciones_triggers.sql:ro
+
+  pg-a-replica:
+    <<: *replica
+    ports: ["5433:5432"]
+    environment:
+      PRIMARIO: pg-a-primario
+      PGPASSWORD: ${REPL_PASSWORD}
+    volumes:
+      - pg-a-replica:/var/lib/postgresql/data
+      - ./docker/replica.sh:/replica.sh:ro
+    depends_on:
+      pg-a-primario: { condition: service_healthy }
+
+  pg-b-primario:
+    <<: *primario
+    ports: ["5434:5432"]
+    volumes:
+      - pg-b-primario:/var/lib/postgresql/data
+      - ./docker/replicacion.sh:/docker-entrypoint-initdb.d/00_replicacion.sh:ro
+      - ./01_tablas.sql:/docker-entrypoint-initdb.d/01_tablas.sql:ro
+      - ./02_indices.sql:/docker-entrypoint-initdb.d/02_indices.sql:ro
+      - ./03_funciones_triggers.sql:/docker-entrypoint-initdb.d/03_funciones_triggers.sql:ro
+
+  pg-b-replica:
+    <<: *replica
+    ports: ["5435:5432"]
+    environment:
+      PRIMARIO: pg-b-primario
+      PGPASSWORD: ${REPL_PASSWORD}
+    volumes:
+      - pg-b-replica:/var/lib/postgresql/data
+      - ./docker/replica.sh:/replica.sh:ro
+    depends_on:
+      pg-b-primario: { condition: service_healthy }
+
+volumes:
+  pg-a-primario:
+  pg-a-replica:
+  pg-b-primario:
+  pg-b-replica:
