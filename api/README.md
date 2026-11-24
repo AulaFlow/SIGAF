@@ -21,7 +21,7 @@ app/
 
 Reglas que aplican los servicios:
 
-- `alumno_id` y `profesor_id` salen del usuario autenticado (objeto `Alumno`/`Profesor`), nunca de la petición.
+- `alumno_id`, `profesor_id` y `centro_academico_id` salen del usuario autenticado (objeto `Alumno`/`Profesor`), nunca de la petición. El centro decide el fragmento (A o B) con el enrutador del #6; sin centro se usa el primer fragmento.
 - El profesor solo ve y modifica SUS grupos; si no es suyo responde "no existe" (no revela datos ajenos).
 - La entrega no recibe `entregada_en`: la pone la base y el trigger decide `a_tiempo`, `tardia` o `SG001`.
 - Pendientes = tareas que todavía se pueden entregar (`cierre_entrega > now()`); `solo_tardia` avisa si ya pasó la fecha límite.

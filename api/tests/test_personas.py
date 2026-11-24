@@ -77,3 +77,11 @@ def test_admin_inscribe_a_quien_indique():
 def test_profesor_no_inscribe():
     with pytest.raises(PermisoDenegadoError):
         Profesor(1, "p@sigaf.test", 3).alumno_a_inscribir(7)
+
+
+def test_centro_academico_opcional_y_validado():
+    assert Alumno(1, "a@sigaf.test", 7, centro_academico_id=4).centro_academico_id == 4
+    assert Profesor(1, "p@sigaf.test", 3, centro_academico_id=2).centro_academico_id == 2
+    assert Administrador(1, "x@sigaf.test").centro_academico_id is None
+    with pytest.raises(ValueError):
+        Alumno(1, "a@sigaf.test", 7, centro_academico_id=0)

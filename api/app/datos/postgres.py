@@ -76,6 +76,10 @@ class BaseDeDatos:
     def transaccion(
         self, persona: Persona | None = None, centro_academico_id: int | None = None
     ) -> Iterator[psycopg.Cursor]:
+        # Fragmento: el centro explícito o, si no se da, el de la persona autenticada
+        # (shard key). Sin ninguno de los dos, catálogos: cualquier fragmento sirve.
+        if centro_academico_id is None and persona is not None:
+            centro_academico_id = persona.centro_academico_id
         pool = self.pool_para(centro_academico_id)
         conexion = pool.getconn()
         try:

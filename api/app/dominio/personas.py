@@ -29,11 +29,18 @@ def _id_positivo(valor: int, nombre: str) -> int:
 class Persona(ABC):
     """Cualquier usuario autenticado de SIGAF."""
 
-    def __init__(self, usuario_id: int, correo: str) -> None:
+    def __init__(self, usuario_id: int, correo: str,
+                 centro_academico_id: int | None = None) -> None:
         self._usuario_id = _id_positivo(usuario_id, "usuario_id")
         if "@" not in correo:
             raise ValueError("correo inválido")
         self._correo = correo
+        # Shard key: decide a qué fragmento (A o B) van sus consultas. Sale del
+        # token, igual que los ids. None = sin centro (p. ej. administrador).
+        self._centro_academico_id = (
+            None if centro_academico_id is None
+            else _id_positivo(centro_academico_id, "centro_academico_id")
+        )
 
     @property
     def usuario_id(self) -> int:
@@ -42,6 +49,10 @@ class Persona(ABC):
     @property
     def correo(self) -> str:
         return self._correo
+
+    @property
+    def centro_academico_id(self) -> int | None:
+        return self._centro_academico_id
 
     @property
     @abstractmethod
@@ -70,8 +81,9 @@ class Persona(ABC):
 
 
 class Alumno(Persona):
-    def __init__(self, usuario_id: int, correo: str, alumno_id: int) -> None:
-        super().__init__(usuario_id, correo)
+    def __init__(self, usuario_id: int, correo: str, alumno_id: int,
+                 centro_academico_id: int | None = None) -> None:
+        super().__init__(usuario_id, correo, centro_academico_id)
         self._alumno_id = _id_positivo(alumno_id, "alumno_id")
 
     @property
@@ -94,8 +106,9 @@ class Alumno(Persona):
 
 
 class Profesor(Persona):
-    def __init__(self, usuario_id: int, correo: str, profesor_id: int) -> None:
-        super().__init__(usuario_id, correo)
+    def __init__(self, usuario_id: int, correo: str, profesor_id: int,
+                 centro_academico_id: int | None = None) -> None:
+        super().__init__(usuario_id, correo, centro_academico_id)
         self._profesor_id = _id_positivo(profesor_id, "profesor_id")
 
     @property
