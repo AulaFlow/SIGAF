@@ -18,7 +18,9 @@ from .config import Configuracion
 from .datos.enrutador import crear_base_distribuida
 from .datos.mongo import crear_cliente_mongo
 from .datos.postgres import crear_pool
+from .errores_http import registrar_manejadores
 from .rutas import ROUTERS
+from .rutas.admin import router as router_admin
 
 TIEMPO_ESPERA_POOL = 10   # segundos para conectar al arrancar
 
@@ -68,5 +70,7 @@ def crear_app(
     # Rutas de alumno, profesor y estadísticas (issue #23).
     for router in ROUTERS:
         app.include_router(router)
+    app.include_router(router_admin)   # rutas del administrador (#7)
+    registrar_manejadores(app)         # excepciones de negocio -> 403/404/409/422/503 (#7)
 
     return app

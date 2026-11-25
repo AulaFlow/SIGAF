@@ -50,7 +50,8 @@ def traducir_error_bd(error: psycopg.Error) -> SigafError | None:
     if estado == SQLSTATE_CHECK:
         if "calificacion" in restriccion:
             return CalificacionInvalidaError("La calificación debe estar entre 0 y 10")
-        return DatoInvalidoError(f"Valor inválido ({restriccion or 'restricción CHECK'})")
+        # Sin el nombre de la restricción: es un detalle interno del esquema.
+        return DatoInvalidoError("Un valor no cumple las reglas de la base")
     if estado == SQLSTATE_REGLA:
         # sp_inscribir_alumno usa P0001 para varios casos; el duplicado se
         # reconoce por su mensaje. (Mejora futura: un SQLSTATE propio, como SG001.)

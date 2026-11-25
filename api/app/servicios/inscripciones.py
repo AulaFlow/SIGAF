@@ -12,11 +12,12 @@ class ServicioInscripciones:
     def __init__(self, bd: BaseDeDatos) -> None:
         self._bd = bd
 
-    def inscribir(self, persona: Persona, grupo_id: int,
-                  alumno_id: int | None = None) -> InscripcionCreada:
+    def inscribir(self, persona: Persona, grupo_id: int, alumno_id: int | None = None,
+                  centro_academico_id: int | None = None) -> InscripcionCreada:
         # Polimorfismo: cada tipo de Persona decide a quién puede inscribir.
         objetivo = persona.alumno_a_inscribir(alumno_id)
-        with self._bd.transaccion(persona) as cur:
+        # centro_academico_id: lo da el admin (no tiene centro propio); si no, el de la persona.
+        with self._bd.transaccion(persona, centro_academico_id=centro_academico_id) as cur:
             inscripcion_id = RepositorioInscripciones(cur).inscribir(objetivo, grupo_id)
         return InscripcionCreada(inscripcion_id=inscripcion_id, alumno_id=objetivo,
                                  grupo_id=grupo_id)

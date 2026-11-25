@@ -213,8 +213,9 @@ def test_mi_actividad(e):
 def test_error_de_negocio_sale_del_servicio_sin_tocarlo(e):
     # La ruta no traduce errores: lo hace el manejador de Ricardo (#7) -> 404.
     e.alumnos.situacion.side_effect = NoEncontradoError("No se encontró")
-    with pytest.raises(NoEncontradoError):
-        e.como(ALUMNO).get("/alumno/situacion")
+    r = e.como(ALUMNO).get("/alumno/situacion")
+    assert r.status_code == 404
+    assert r.json() == {"error": "no_encontrado", "mensaje": "No se encontró"}
 
 
 # ---------------------------------------------------------------- profesor
@@ -336,7 +337,8 @@ def test_entregas_por_centro(e):
 def test_openapi_documenta_las_16_rutas_con_tag_resumen_y_bearer(e):
     esquema = e.app.openapi()
     operaciones = [(ruta, op) for ruta, metodos in esquema["paths"].items()
-                   if ruta != "/health" for op in metodos.values()]
+                   if ruta != "/health" and not ruta.startswith("/admin")   # admin: #7
+                   for op in metodos.values()]
     assert len(operaciones) == 16
     for ruta, op in operaciones:
         assert op["tags"] and op["summary"], ruta

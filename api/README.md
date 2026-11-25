@@ -76,6 +76,29 @@ Copia `.env.example` como `.env` (git lo ignora) y llénalo. La API entra
 | `23514` | CHECK de calificación / otros | `CalificacionInvalidaError` / `DatoInvalidoError` |
 | otro | conexión, permisos, llaves | no se traduce: se deja pasar |
 
+## Errores HTTP (`app/errores_http.py`)
+
+Todas las respuestas de error de negocio tienen la forma `{"error": "<código>", "mensaje": "<texto>"}`.
+`error` es estable (para el código de la app); `mensaje` es para la persona y nunca lleva SQL,
+nombres de tablas ni trazas.
+
+| Excepción | HTTP | `error` |
+|---|---|---|
+| `NoEncontradoError` | 404 | `no_encontrado` |
+| `PermisoDenegadoError` | 403 | `permiso_denegado` |
+| `EntregaFueraDeTiempoError` | 409 | `entrega_fuera_de_tiempo` |
+| `InscripcionDuplicadaError` | 409 | `inscripcion_duplicada` |
+| `RegistroDuplicadoError` | 409 | `registro_duplicado` |
+| `ReglaDeNegocioError` | 409 | `regla_de_negocio` |
+| `CalificacionInvalidaError` | 422 | `calificacion_invalida` |
+| `DatoInvalidoError` | 422 | `dato_invalido` |
+| `ServicioNoDisponibleError` | 503 | `servicio_no_disponible` (mensaje fijo) |
+| cualquier otra | 500 | `error_interno` (mensaje fijo; el detalle solo va al log) |
+
+- Un solo manejador para `SigafError`: busca la traducción recorriendo la jerarquía de la
+  excepción, así una subclase nueva hereda el código de su padre.
+- Los 422 de validación de FastAPI (body o URL mal formados) conservan su formato `{"detail": [...]}`.
+
 ## Rutas HTTP (issue #23)
 
 Cada ruta une la persona (`seguridad.py`), un servicio y sus esquemas. No hay SQL ni
@@ -99,11 +122,28 @@ consultas a MongoDB en `app/rutas/`. Documentación interactiva en `/docs`.
 | `GET /estadisticas/distribucion?periodo=&tipo=` | `ServicioEstadisticas.distribucion` | profesor, admin |
 | `GET /estadisticas/promedio-por-materia?periodo=&cuantas=` | `ServicioEstadisticas.promedio_por_materia` | profesor, admin |
 | `GET /estadisticas/entregas-por-centro?periodo=` | `ServicioEstadisticas.entregas_por_centro` | profesor, admin |
+| `POST /admin/inscripciones` (201) | `ServicioAdministrador.inscribir` | admin |
+| `GET /admin/alumnos/{alumno_id}/datos` | `ServicioAdministrador.datos_alumno` | admin |
 
 - Sin token: **401**. Rol equivocado: **403** (se revisa antes de llamar al servicio).
 - Ids en la URL: enteros positivos que caben en BIGINT; si no, **422**.
 - Hasta que llegue el login del #11, `usuario_actual()` responde siempre 401: no hay usuario falso en la app.
 - Contrato para la app: `python scripts/exportar_openapi.py` genera `api/openapi.json`.
+
+### Administrador (#7)
+
+El administrador no tiene centro, así que su token no dice a qué fragmento ir.
+`ServicioAdministrador` primero busca el centro del grupo (inscribir) o del alumno
+(datos personales) y luego abre la transacción solo en ese fragmento.
+
+- **Provisional, pendiente de decisión del equipo:** el centro se busca preguntando en
+  todos los fragmentos (`BaseDistribuida.en_todos`). Cambiar de estrategia solo toca
+  `ServicioAdministrador._ubicar`.
+- Si el alumno es de otro centro que el grupo, en ese fragmento no existe y
+  `sp_inscribir_alumno` responde 404.
+- `GET /admin/alumnos/{alumno_id}/datos` usa `fn_datos_alumno` y necesita
+  `db/08_permisos_admin.sql` (decisión de seguridad pendiente); sin él, la base niega el
+  permiso y la API responde 500.
 
 ## Correr
 
