@@ -1,0 +1,131 @@
+"""Personas del sistema: Persona es la base abstracta de Alumno, Profesor y
+Administrador (herencia y polimorfismo, como sugirió el profe de Python).
+
+El identificador de cada persona (alumno_id, profesor_id) sale SIEMPRE del
+usuario autenticado, nunca de la petición. Por eso estas clases se crean en
+la capa de seguridad y los servicios las reciben ya construidas.
+"""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from enum import StrEnum
+
+from .excepciones import DatoInvalidoError, PermisoDenegadoError
+
+
+class Rol(StrEnum):
+    ALUMNO = "alumno"
+    PROFESOR = "profesor"
+    ADMINISTRADOR = "administrador"
+
+
+def _id_positivo(valor: int, nombre: str) -> int:
+    if isinstance(valor, bool) or not isinstance(valor, int) or valor <= 0:
+        raise ValueError(f"{nombre} debe ser un entero positivo")
+    return valor
+
+
+class Persona(ABC):
+    """Cualquier usuario autenticado de SIGAF."""
+
+    def __init__(self, usuario_id: int, correo: str,
+                 centro_academico_id: int | None = None) -> None:
+        self._usuario_id = _id_positivo(usuario_id, "usuario_id")
+        if "@" not in correo:
+            raise ValueError("correo inválido")
+        self._correo = correo
+        # Shard key: decide a qué fragmento (A o B) van sus consultas. Sale del
+        # token, igual que los ids. None = sin centro (p. ej. administrador).
+        self._centro_academico_id = (
+            None if centro_academico_id is None
+            else _id_positivo(centro_academico_id, "centro_academico_id")
+        )
+
+    @property
+    def usuario_id(self) -> int:
+        return self._usuario_id
+
+    @property
+    def correo(self) -> str:
+        return self._correo
+
+    @property
+    def centro_academico_id(self) -> int | None:
+        return self._centro_academico_id
+
+    @property
+    @abstractmethod
+    def rol(self) -> Rol:
+        """Rol de la persona en el sistema."""
+
+    def variables_de_sesion(self) -> dict[str, str]:
+        """Variables que la API pone en la sesión de PostgreSQL con set_config.
+
+        Por defecto ninguna; cada subclase agrega las suyas (polimorfismo).
+        """
+        return {}
+
+    def es(self, *roles: Rol) -> bool:
+        return self.rol in roles
+
+    def alumno_a_inscribir(self, alumno_id: int | None) -> int:
+        """A quién puede inscribir esta persona (polimorfismo: cada rol responde distinto).
+
+        Por defecto nadie puede inscribir; Alumno y Administrador lo sobrescriben.
+        """
+        raise PermisoDenegadoError("Solo un alumno o un administrador pueden inscribir")
+
+    def __repr__(self) -> str:   # sin el correo: no exponer datos en logs
+        return f"{type(self).__name__}(usuario_id={self._usuario_id})"
+
+
+class Alumno(Persona):
+    def __init__(self, usuario_id: int, correo: str, alumno_id: int,
+                 centro_academico_id: int | None = None) -> None:
+        super().__init__(usuario_id, correo, centro_academico_id)
+        self._alumno_id = _id_positivo(alumno_id, "alumno_id")
+
+    @property
+    def alumno_id(self) -> int:
+        return self._alumno_id
+
+    @property
+    def rol(self) -> Rol:
+        return Rol.ALUMNO
+
+    def variables_de_sesion(self) -> dict[str, str]:
+        # fn_mis_datos() lee esta variable: el alumno solo ve SUS datos.
+        return {"sigaf.alumno_sesion": str(self._alumno_id)}
+
+    def alumno_a_inscribir(self, alumno_id: int | None) -> int:
+        # El alumno solo se inscribe a sí mismo: su id sale del token, no de la petición.
+        if alumno_id is not None and alumno_id != self._alumno_id:
+            raise PermisoDenegadoError("Un alumno solo puede inscribirse a sí mismo")
+        return self._alumno_id
+
+
+class Profesor(Persona):
+    def __init__(self, usuario_id: int, correo: str, profesor_id: int,
+                 centro_academico_id: int | None = None) -> None:
+        super().__init__(usuario_id, correo, centro_academico_id)
+        self._profesor_id = _id_positivo(profesor_id, "profesor_id")
+
+    @property
+    def profesor_id(self) -> int:
+        return self._profesor_id
+
+    @property
+    def rol(self) -> Rol:
+        return Rol.PROFESOR
+
+
+class Administrador(Persona):
+    @property
+    def rol(self) -> Rol:
+        return Rol.ADMINISTRADOR
+
+    def alumno_a_inscribir(self, alumno_id: int | None) -> int:
+        if alumno_id is None:
+            raise DatoInvalidoError("El administrador debe indicar alumno_id")
+        return alumno_id
