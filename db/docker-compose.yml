@@ -1,0 +1,103 @@
+# SIGAF · base distribuida con Patroni (issue #9)
+#
+#   etcd ........... dónde Patroni anota quién es el primario de cada fragmento
+#   pg-a1, pg-a2 ... fragmento A (CCB, CCSH, CCA): Patroni elige primario y réplica
+#   pg-b1, pg-b2 ... fragmento B (CCEA, CCS, CCDC)
+#   haproxy ........ puerta fija: 5432/5433 = A primario/réplica, 5434/5435 = B
+#
+# Uso:  cd db && docker compose up -d --build
+#       docker compose exec pg-a1 patronictl list      (quién es primario)
+#       bash patroni/prueba_caida.sh                    (prueba de caída)
+name: sigaf
+
+x-nodo: &nodo
+  build: ./patroni
+  image: sigaf-patroni:16
+  restart: unless-stopped
+  environment: &entorno
+    SIGAF_PASS_SUPER: ${SIGAF_PASS_SUPER:?falta en .env}
+    SIGAF_PASS_REPL: ${SIGAF_PASS_REPL:?falta en .env}
+    SIGAF_PASS_ADMIN: ${SIGAF_PASS_ADMIN:?falta en .env}
+    SIGAF_PASS_API: ${SIGAF_PASS_API:?falta en .env}
+    SIGAF_PASS_ETL: ${SIGAF_PASS_ETL:?falta en .env}
+  depends_on:
+    etcd: { condition: service_started }
+    certificados: { condition: service_completed_successfully }
+
+services:
+  # Genera la CA y un certificado por nodo con el script de Ricardo (una vez).
+  certificados:
+    build: ./patroni
+    image: sigaf-patroni:16
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -e
+        if [ -f /out/certs/pg-b2.crt ]; then echo "certificados ya existen"; exit 0; fi
+        sed 's/\r$$//' /infra/generar_certificados.sh > /out/generar_certificados.sh
+        bash /out/generar_certificados.sh pg-a1 pg-a2 pg-b1 pg-b2
+    volumes:
+      - ../infra/postgres:/infra:ro
+      - certs:/out/certs
+
+  etcd:
+    image: gcr.io/etcd-development/etcd:v3.5.17
+    restart: unless-stopped
+    command:
+      - etcd
+      - --name=etcd
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+    volumes:
+      - etcd:/etcd-data
+
+  pg-a1:
+    <<: *nodo
+    hostname: pg-a1
+    environment: { <<: *entorno, NODO: pg-a1, FRAGMENTO: a }
+    volumes: [pg-a1:/var/lib/postgresql/data, certs:/certs:ro, ./:/sigaf-sql:ro]
+  pg-a2:
+    <<: *nodo
+    hostname: pg-a2
+    environment: { <<: *entorno, NODO: pg-a2, FRAGMENTO: a }
+    volumes: [pg-a2:/var/lib/postgresql/data, certs:/certs:ro, ./:/sigaf-sql:ro]
+  pg-b1:
+    <<: *nodo
+    hostname: pg-b1
+    environment: { <<: *entorno, NODO: pg-b1, FRAGMENTO: b }
+    volumes: [pg-b1:/var/lib/postgresql/data, certs:/certs:ro, ./:/sigaf-sql:ro]
+  pg-b2:
+    <<: *nodo
+    hostname: pg-b2
+    environment: { <<: *entorno, NODO: pg-b2, FRAGMENTO: b }
+    volumes: [pg-b2:/var/lib/postgresql/data, certs:/certs:ro, ./:/sigaf-sql:ro]
+
+  haproxy:
+    image: haproxy:2.8
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+      - "5433:5433"
+      - "5434:5434"
+      - "5435:5435"
+      - "7000:7000"
+    volumes:
+      - ./patroni/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on: [pg-a1, pg-a2, pg-b1, pg-b2]
+
+# La red usa 192.168.x para que coincida con el pg_hba.conf de Ricardo
+# (replicación solo desde 192.168.0.0/16 y la VPN 10.8.0.0/24).
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 192.168.77.0/24
+
+volumes:
+  certs:
+  etcd:
+  pg-a1:
+  pg-a2:
+  pg-b1:
+  pg-b2:
