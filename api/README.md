@@ -18,6 +18,9 @@ app/
   repositorios/        el ÚNICO lugar con SQL (siempre con parámetros %s)
   servicios/           casos de uso por rol: alumno, profesor, inscripciones, estadísticas
   datos/mongo.py       lectura de MongoDB (pymongo): consultas y pipelines fijos
+  rutas/               capa HTTP (#23): alumno, profesor, estadísticas; solo llaman servicios
+  seguridad.py         usuario_actual() y requiere_rol() (login JWT del #11; hoy provisional)
+scripts/exportar_openapi.py  genera openapi.json para la app de Flutter
 ```
 
 ### Estadísticas (MongoDB)
@@ -72,6 +75,35 @@ Copia `.env.example` como `.env` (git lo ignora) y llénalo. La API entra
 | `23505` | UNIQUE (en `inscripcion`) | `InscripcionDuplicadaError` / `RegistroDuplicadoError` |
 | `23514` | CHECK de calificación / otros | `CalificacionInvalidaError` / `DatoInvalidoError` |
 | otro | conexión, permisos, llaves | no se traduce: se deja pasar |
+
+## Rutas HTTP (issue #23)
+
+Cada ruta une la persona (`seguridad.py`), un servicio y sus esquemas. No hay SQL ni
+consultas a MongoDB en `app/rutas/`. Documentación interactiva en `/docs`.
+
+| Método y ruta | Servicio | Rol |
+|---|---|---|
+| `GET /alumno/datos` | `ServicioAlumno.mis_datos` | alumno |
+| `GET /alumno/boleta` | `ServicioAlumno.boleta` | alumno |
+| `GET /alumno/pendientes` | `ServicioAlumno.pendientes` | alumno |
+| `GET /alumno/situacion` | `ServicioAlumno.situacion` | alumno |
+| `POST /alumno/tareas/{tarea_id}/entregas` (201) | `ServicioAlumno.entregar` | alumno |
+| `POST /alumno/inscripciones` (201) | `ServicioInscripciones.inscribir` | alumno |
+| `GET /alumno/actividad` | `ServicioEstadisticas.mi_actividad` | alumno |
+| `GET /profesor/grupos` | `ServicioProfesor.grupos` | profesor |
+| `GET /profesor/grupos/{grupo_id}/alumnos` | `ServicioProfesor.alumnos_de_grupo` | profesor |
+| `POST /profesor/grupos/{grupo_id}/tareas` (201) | `ServicioProfesor.crear_tarea` | profesor |
+| `PUT /profesor/entregas/{entrega_id}/calificacion` | `ServicioProfesor.calificar_entrega` | profesor |
+| `POST /profesor/calificaciones` (201) | `ServicioProfesor.registrar_calificacion` | profesor |
+| `GET /profesor/grupos/{grupo_id}/resumen` | `ServicioEstadisticas.resumen_de_grupo` | profesor |
+| `GET /estadisticas/distribucion?periodo=&tipo=` | `ServicioEstadisticas.distribucion` | profesor, admin |
+| `GET /estadisticas/promedio-por-materia?periodo=&cuantas=` | `ServicioEstadisticas.promedio_por_materia` | profesor, admin |
+| `GET /estadisticas/entregas-por-centro?periodo=` | `ServicioEstadisticas.entregas_por_centro` | profesor, admin |
+
+- Sin token: **401**. Rol equivocado: **403** (se revisa antes de llamar al servicio).
+- Ids en la URL: enteros positivos que caben en BIGINT; si no, **422**.
+- Hasta que llegue el login del #11, `usuario_actual()` responde siempre 401: no hay usuario falso en la app.
+- Contrato para la app: `python scripts/exportar_openapi.py` genera `api/openapi.json`.
 
 ## Correr
 
