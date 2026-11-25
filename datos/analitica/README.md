@@ -45,6 +45,29 @@ python -m analitica graficas --periodo 2026-AGO-DIC          # PNG en graficas/
 Con los dos fragmentos:
 `export SIGAF_FRAGMENTOS="A=postgresql://sigaf_etl_svc@laptop1/postgres;B=postgresql://sigaf_etl_svc@laptop2/postgres"`
 
+## Con Docker y los fragmentos reales A y B (issue #8)
+
+MongoDB ya viene en `db/docker-compose.yml` (servicio `mongo`, con usuario `sigaf` y la
+contraseña `SIGAF_PASS_MONGO` del `db/.env`; solo escucha en `127.0.0.1:27017`).
+El contenedor del ETL lee A por `haproxy:5432` y B por `haproxy:5434`, con TLS (`verify-ca`).
+
+```bash
+cd db && docker compose up -d && cd ..                                   # Patroni + HAProxy + MongoDB
+docker run --rm --network sigaf_default -v sigaf_certs:/certs:ro --env-file db/.env sigaf-reparto todo
+docker build -t sigaf-analitica datos/analitica
+docker run --rm --network sigaf_default -v sigaf_certs:/certs:ro --env-file db/.env sigaf-analitica etl
+docker run --rm --network sigaf_default --env-file db/.env -v "$PWD/graficas:/app/graficas" \
+    sigaf-analitica graficas --periodo 2026-AGO-DIC
+```
+
+En Git Bash (Windows) antepón `MSYS_NO_PATHCONV=1` a los `docker run`.
+
+Resultado esperado con los datos del generador: `historico_calificaciones` = 30,000
+(14,700 de A + 15,300 de B), los 6 centros presentes y el mismo promedio por centro que en
+PostgreSQL. Volver a correr el ETL no duplica (reemplaza por `_id`).
+
+Para la API: `SIGAF_MONGO_URI=mongodb://sigaf:<SIGAF_PASS_MONGO>@mongo:27017/?authSource=admin`.
+
 ## Pruebas
 
 ```bash
