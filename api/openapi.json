@@ -1,0 +1,1862 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SIGAF API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alumno/datos": {
+      "get": {
+        "tags": [
+          "alumno"
+        ],
+        "summary": "Mis datos personales",
+        "description": "Nombre y apellidos del alumno, descifrados en la base solo para él.",
+        "operationId": "mis_datos_alumno_datos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MisDatos"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/alumno/boleta": {
+      "get": {
+        "tags": [
+          "alumno"
+        ],
+        "summary": "Mi boleta",
+        "description": "Materias inscritas con sus parciales, promedio y final.",
+        "operationId": "boleta_alumno_boleta_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MateriaBoleta"
+                  },
+                  "type": "array",
+                  "title": "Response Boleta Alumno Boleta Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/alumno/pendientes": {
+      "get": {
+        "tags": [
+          "alumno"
+        ],
+        "summary": "Mis tareas pendientes",
+        "description": "Tareas sin entregar que todavía aceptan entrega (a tiempo o como tardía).",
+        "operationId": "pendientes_alumno_pendientes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Pendiente"
+                  },
+                  "type": "array",
+                  "title": "Response Pendientes Alumno Pendientes Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/alumno/situacion": {
+      "get": {
+        "tags": [
+          "alumno"
+        ],
+        "summary": "Mi situación académica",
+        "description": "Materias aprobadas y reprobadas, créditos y promedio general.",
+        "operationId": "situacion_alumno_situacion_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituacionAcademica"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/alumno/tareas/{tarea_id}/entregas": {
+      "post": {
+        "tags": [
+          "alumno"
+        ],
+        "summary": "Entregar una tarea",
+        "description": "La fecha la pone la base. Pasado el margen de la tarea se rechaza (409).",
+        "operationId": "entregar_alumno_tareas__tarea_id__entregas_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tarea_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Tarea Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntregaNueva"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntregaRegistrada"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "409": {
+            "description": "Regla de negocio: duplicado o entrega fuera de tiempo"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alumno/inscripciones": {
+      "post": {
+        "tags": [
+          "alumno"
+        ],
+        "summary": "Inscribirme a un grupo",
+        "description": "El alumno solo se inscribe a sí mismo; el grupo va en el body.",
+        "operationId": "inscribirme_alumno_inscripciones_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InscripcionNueva"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InscripcionCreada"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "409": {
+            "description": "Regla de negocio: duplicado o entrega fuera de tiempo"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/alumno/actividad": {
+      "get": {
+        "tags": [
+          "alumno"
+        ],
+        "summary": "Mi actividad",
+        "description": "Entregas a tiempo, tardías, no entregadas y faltas por periodo (desde MongoDB;\npuede ir un poco atrás de PostgreSQL: ver actualizado_en).",
+        "operationId": "mi_actividad_alumno_actividad_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ActividadDelAlumno"
+                  },
+                  "type": "array",
+                  "title": "Response Mi Actividad Alumno Actividad Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "503": {
+            "description": "La base de análisis (MongoDB) no responde"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/profesor/grupos": {
+      "get": {
+        "tags": [
+          "profesor"
+        ],
+        "summary": "Mis grupos",
+        "description": "Grupos que imparte el profesor, con cupo e inscritos.",
+        "operationId": "grupos_profesor_grupos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GrupoDelProfesor"
+                  },
+                  "type": "array",
+                  "title": "Response Grupos Profesor Grupos Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/profesor/grupos/{grupo_id}/alumnos": {
+      "get": {
+        "tags": [
+          "profesor"
+        ],
+        "summary": "Alumnos de mi grupo",
+        "description": "Lista del grupo con nombre (descifrado solo para sus grupos), promedio y asistencia.",
+        "operationId": "alumnos_de_grupo_profesor_grupos__grupo_id__alumnos_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "grupo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Grupo Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlumnoDelGrupo"
+                  },
+                  "title": "Response Alumnos De Grupo Profesor Grupos  Grupo Id  Alumnos Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profesor/grupos/{grupo_id}/tareas": {
+      "post": {
+        "tags": [
+          "profesor"
+        ],
+        "summary": "Crear una tarea",
+        "description": "El profesor fija la fecha límite y el margen de entrega tardía (48 h si no lo da).",
+        "operationId": "crear_tarea_profesor_grupos__grupo_id__tareas_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "grupo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Grupo Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TareaNueva"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tarea"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profesor/entregas/{entrega_id}/calificacion": {
+      "put": {
+        "tags": [
+          "profesor"
+        ],
+        "summary": "Calificar una entrega",
+        "description": "Calificación de 0 a 10 y retroalimentación opcional.",
+        "operationId": "calificar_entrega_profesor_entregas__entrega_id__calificacion_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entrega_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Entrega Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalificacionDeEntrega"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntregaCalificada"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profesor/calificaciones": {
+      "post": {
+        "tags": [
+          "profesor"
+        ],
+        "summary": "Registrar una calificación",
+        "description": "Parcial o final de una inscripción de sus grupos.",
+        "operationId": "registrar_calificacion_profesor_calificaciones_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalificacionNueva"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalificacionRegistrada"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "409": {
+            "description": "Regla de negocio: duplicado o entrega fuera de tiempo"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/profesor/grupos/{grupo_id}/resumen": {
+      "get": {
+        "tags": [
+          "profesor"
+        ],
+        "summary": "Resumen de mi grupo",
+        "description": "Promedio, % de aprobados y % de asistencia del grupo (desde MongoDB).",
+        "operationId": "resumen_de_grupo_profesor_grupos__grupo_id__resumen_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "grupo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Grupo Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenDeGrupo"
+                  },
+                  "title": "Response Resumen De Grupo Profesor Grupos  Grupo Id  Resumen Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "503": {
+            "description": "La base de análisis (MongoDB) no responde"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/estadisticas/distribucion": {
+      "get": {
+        "tags": [
+          "estadísticas"
+        ],
+        "summary": "Distribución de calificaciones",
+        "description": "Cuántas calificaciones caen en cada rango [0,1), [1,2) … 10. Filtro opcional por tipo.",
+        "operationId": "distribucion_estadisticas_distribucion_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "periodo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-[A-Z]{3}-[A-Z]{3}$",
+              "description": "Periodo escolar",
+              "examples": [
+                "2026-AGO-DIC"
+              ],
+              "title": "Periodo"
+            },
+            "description": "Periodo escolar"
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "parcial1",
+                    "parcial2",
+                    "parcial3",
+                    "final"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tipo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Distribucion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "503": {
+            "description": "La base de análisis (MongoDB) no responde"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/estadisticas/promedio-por-materia": {
+      "get": {
+        "tags": [
+          "estadísticas"
+        ],
+        "summary": "Materias con menor promedio",
+        "description": "Las materias con el promedio más bajo del periodo, de menor a mayor.",
+        "operationId": "promedio_por_materia_estadisticas_promedio_por_materia_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "periodo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-[A-Z]{3}-[A-Z]{3}$",
+              "description": "Periodo escolar",
+              "examples": [
+                "2026-AGO-DIC"
+              ],
+              "title": "Periodo"
+            },
+            "description": "Periodo escolar"
+          },
+          {
+            "name": "cuantas",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 12,
+              "title": "Cuantas"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromedioMateria"
+                  },
+                  "title": "Response Promedio Por Materia Estadisticas Promedio Por Materia Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "503": {
+            "description": "La base de análisis (MongoDB) no responde"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/estadisticas/entregas-por-centro": {
+      "get": {
+        "tags": [
+          "estadísticas"
+        ],
+        "summary": "Entregas a tiempo vs tardías por centro",
+        "description": "Junta los dos fragmentos (A y B) a través de MongoDB, como dice la consulta C10.",
+        "operationId": "entregas_por_centro_estadisticas_entregas_por_centro_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "periodo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-[A-Z]{3}-[A-Z]{3}$",
+              "description": "Periodo escolar",
+              "examples": [
+                "2026-AGO-DIC"
+              ],
+              "title": "Periodo"
+            },
+            "description": "Periodo escolar"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntregasCentro"
+                  },
+                  "title": "Response Entregas Por Centro Estadisticas Entregas Por Centro Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "503": {
+            "description": "La base de análisis (MongoDB) no responde"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActividadDelAlumno": {
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "title": "Periodo"
+          },
+          "centro": {
+            "type": "string",
+            "title": "Centro"
+          },
+          "entregas_a_tiempo": {
+            "type": "integer",
+            "title": "Entregas A Tiempo"
+          },
+          "entregas_tardias": {
+            "type": "integer",
+            "title": "Entregas Tardias"
+          },
+          "no_entregadas": {
+            "type": "integer",
+            "title": "No Entregadas"
+          },
+          "faltas": {
+            "type": "integer",
+            "title": "Faltas"
+          },
+          "actualizado_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actualizado En"
+          }
+        },
+        "type": "object",
+        "required": [
+          "periodo",
+          "centro",
+          "entregas_a_tiempo",
+          "entregas_tardias",
+          "no_entregadas",
+          "faltas"
+        ],
+        "title": "ActividadDelAlumno"
+      },
+      "AlumnoDelGrupo": {
+        "properties": {
+          "alumno_id": {
+            "type": "integer",
+            "title": "Alumno Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "apellidos": {
+            "type": "string",
+            "title": "Apellidos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alumno_id",
+          "nombre",
+          "apellidos"
+        ],
+        "title": "AlumnoDelGrupo",
+        "description": "Sin matrícula: en la base solo está su seudónimo, que no le sirve al profesor."
+      },
+      "CalificacionDeEntrega": {
+        "properties": {
+          "calificacion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Calificacion"
+          },
+          "retroalimentacion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retroalimentacion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calificacion"
+        ],
+        "title": "CalificacionDeEntrega"
+      },
+      "CalificacionNueva": {
+        "properties": {
+          "inscripcion_id": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "exclusiveMinimum": 0.0,
+            "title": "Inscripcion Id"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "parcial1",
+              "parcial2",
+              "parcial3",
+              "final"
+            ],
+            "title": "Tipo"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Valor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "inscripcion_id",
+          "tipo",
+          "valor"
+        ],
+        "title": "CalificacionNueva"
+      },
+      "CalificacionRegistrada": {
+        "properties": {
+          "calificacion_id": {
+            "type": "integer",
+            "title": "Calificacion Id"
+          },
+          "inscripcion_id": {
+            "type": "integer",
+            "title": "Inscripcion Id"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "parcial1",
+              "parcial2",
+              "parcial3",
+              "final"
+            ],
+            "title": "Tipo"
+          },
+          "valor": {
+            "type": "number",
+            "title": "Valor"
+          },
+          "validada": {
+            "type": "boolean",
+            "title": "Validada"
+          }
+        },
+        "type": "object",
+        "required": [
+          "calificacion_id",
+          "inscripcion_id",
+          "tipo",
+          "valor",
+          "validada"
+        ],
+        "title": "CalificacionRegistrada"
+      },
+      "Distribucion": {
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "title": "Periodo"
+          },
+          "tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "parcial1",
+                  "parcial2",
+                  "parcial3",
+                  "final"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "rangos": {
+            "items": {
+              "$ref": "#/components/schemas/RangoCalificaciones"
+            },
+            "type": "array",
+            "title": "Rangos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "periodo",
+          "tipo",
+          "total",
+          "rangos"
+        ],
+        "title": "Distribucion"
+      },
+      "EntregaCalificada": {
+        "properties": {
+          "entrega_id": {
+            "type": "integer",
+            "title": "Entrega Id"
+          },
+          "calificacion": {
+            "type": "number",
+            "title": "Calificacion"
+          },
+          "retroalimentacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retroalimentacion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entrega_id",
+          "calificacion",
+          "retroalimentacion"
+        ],
+        "title": "EntregaCalificada"
+      },
+      "EntregaNueva": {
+        "properties": {
+          "archivo_ruta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.\\-/]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivo Ruta"
+          },
+          "archivo_tamano_bytes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 52428800.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivo Tamano Bytes"
+          },
+          "archivo_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "pattern": "^[a-z]+/[a-z0-9.+\\-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivo Tipo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EntregaNueva",
+        "description": "Lo que manda el alumno. NO incluye entregada_en: la pone la base con\nDEFAULT now(), así nadie puede fingir que entregó a tiempo."
+      },
+      "EntregaRegistrada": {
+        "properties": {
+          "entrega_id": {
+            "type": "integer",
+            "title": "Entrega Id"
+          },
+          "tarea_id": {
+            "type": "integer",
+            "title": "Tarea Id"
+          },
+          "entregada_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Entregada En"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "a_tiempo",
+              "tardia"
+            ],
+            "title": "Estado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entrega_id",
+          "tarea_id",
+          "entregada_en",
+          "estado"
+        ],
+        "title": "EntregaRegistrada"
+      },
+      "EntregasCentro": {
+        "properties": {
+          "centro": {
+            "type": "string",
+            "title": "Centro"
+          },
+          "a_tiempo": {
+            "type": "integer",
+            "title": "A Tiempo"
+          },
+          "tardias": {
+            "type": "integer",
+            "title": "Tardias"
+          },
+          "no_entregadas": {
+            "type": "integer",
+            "title": "No Entregadas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "centro",
+          "a_tiempo",
+          "tardias",
+          "no_entregadas"
+        ],
+        "title": "EntregasCentro"
+      },
+      "GrupoDelProfesor": {
+        "properties": {
+          "grupo_id": {
+            "type": "integer",
+            "title": "Grupo Id"
+          },
+          "clave": {
+            "type": "string",
+            "title": "Clave"
+          },
+          "materia_clave": {
+            "type": "string",
+            "title": "Materia Clave"
+          },
+          "materia": {
+            "type": "string",
+            "title": "Materia"
+          },
+          "periodo": {
+            "type": "string",
+            "title": "Periodo"
+          },
+          "cupo": {
+            "type": "integer",
+            "title": "Cupo"
+          },
+          "inscritos": {
+            "type": "integer",
+            "title": "Inscritos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grupo_id",
+          "clave",
+          "materia_clave",
+          "materia",
+          "periodo",
+          "cupo",
+          "inscritos"
+        ],
+        "title": "GrupoDelProfesor"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InscripcionCreada": {
+        "properties": {
+          "inscripcion_id": {
+            "type": "integer",
+            "title": "Inscripcion Id"
+          },
+          "alumno_id": {
+            "type": "integer",
+            "title": "Alumno Id"
+          },
+          "grupo_id": {
+            "type": "integer",
+            "title": "Grupo Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "inscripcion_id",
+          "alumno_id",
+          "grupo_id"
+        ],
+        "title": "InscripcionCreada"
+      },
+      "InscripcionNueva": {
+        "properties": {
+          "grupo_id": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "exclusiveMinimum": 0.0,
+            "title": "Grupo Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "grupo_id"
+        ],
+        "title": "InscripcionNueva",
+        "description": "El alumno se inscribe a sí mismo: no manda alumno_id (sale del token)."
+      },
+      "MateriaBoleta": {
+        "properties": {
+          "inscripcion_id": {
+            "type": "integer",
+            "title": "Inscripcion Id"
+          },
+          "materia_clave": {
+            "type": "string",
+            "title": "Materia Clave"
+          },
+          "materia": {
+            "type": "string",
+            "title": "Materia"
+          },
+          "parcial1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcial1"
+          },
+          "parcial2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcial2"
+          },
+          "parcial3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcial3"
+          },
+          "promedio_parciales": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promedio Parciales"
+          },
+          "final": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final"
+          }
+        },
+        "type": "object",
+        "required": [
+          "inscripcion_id",
+          "materia_clave",
+          "materia",
+          "parcial1",
+          "parcial2",
+          "parcial3",
+          "promedio_parciales",
+          "final"
+        ],
+        "title": "MateriaBoleta"
+      },
+      "MisDatos": {
+        "properties": {
+          "alumno_id": {
+            "type": "integer",
+            "title": "Alumno Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "apellidos": {
+            "type": "string",
+            "title": "Apellidos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alumno_id",
+          "nombre",
+          "apellidos"
+        ],
+        "title": "MisDatos"
+      },
+      "Pendiente": {
+        "properties": {
+          "tarea_id": {
+            "type": "integer",
+            "title": "Tarea Id"
+          },
+          "titulo": {
+            "type": "string",
+            "title": "Titulo"
+          },
+          "materia": {
+            "type": "string",
+            "title": "Materia"
+          },
+          "fecha_limite": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Limite"
+          },
+          "margen_tardia_horas": {
+            "type": "number",
+            "title": "Margen Tardia Horas"
+          },
+          "cierre_entrega": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cierre Entrega"
+          },
+          "solo_tardia": {
+            "type": "boolean",
+            "title": "Solo Tardia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tarea_id",
+          "titulo",
+          "materia",
+          "fecha_limite",
+          "margen_tardia_horas",
+          "cierre_entrega",
+          "solo_tardia"
+        ],
+        "title": "Pendiente"
+      },
+      "PromedioMateria": {
+        "properties": {
+          "materia_clave": {
+            "type": "string",
+            "title": "Materia Clave"
+          },
+          "materia": {
+            "type": "string",
+            "title": "Materia"
+          },
+          "promedio": {
+            "type": "number",
+            "title": "Promedio"
+          },
+          "alumnos": {
+            "type": "integer",
+            "title": "Alumnos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "materia_clave",
+          "materia",
+          "promedio",
+          "alumnos"
+        ],
+        "title": "PromedioMateria"
+      },
+      "RangoCalificaciones": {
+        "properties": {
+          "desde": {
+            "type": "integer",
+            "title": "Desde"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "desde",
+          "total"
+        ],
+        "title": "RangoCalificaciones"
+      },
+      "ResumenDeGrupo": {
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "title": "Periodo"
+          },
+          "materia_clave": {
+            "type": "string",
+            "title": "Materia Clave"
+          },
+          "materia": {
+            "type": "string",
+            "title": "Materia"
+          },
+          "alumnos": {
+            "type": "integer",
+            "title": "Alumnos"
+          },
+          "promedio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promedio"
+          },
+          "pct_aprobados": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Aprobados"
+          },
+          "pct_asistencia": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Asistencia"
+          },
+          "actualizado_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actualizado En"
+          }
+        },
+        "type": "object",
+        "required": [
+          "periodo",
+          "materia_clave",
+          "materia",
+          "alumnos",
+          "promedio",
+          "pct_aprobados",
+          "pct_asistencia"
+        ],
+        "title": "ResumenDeGrupo"
+      },
+      "SituacionAcademica": {
+        "properties": {
+          "materias_aprobadas": {
+            "type": "integer",
+            "title": "Materias Aprobadas"
+          },
+          "materias_reprobadas": {
+            "type": "integer",
+            "title": "Materias Reprobadas"
+          },
+          "creditos_aprobados": {
+            "type": "integer",
+            "title": "Creditos Aprobados"
+          },
+          "promedio_general": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promedio General"
+          }
+        },
+        "type": "object",
+        "required": [
+          "materias_aprobadas",
+          "materias_reprobadas",
+          "creditos_aprobados",
+          "promedio_general"
+        ],
+        "title": "SituacionAcademica"
+      },
+      "Tarea": {
+        "properties": {
+          "tarea_id": {
+            "type": "integer",
+            "title": "Tarea Id"
+          },
+          "grupo_id": {
+            "type": "integer",
+            "title": "Grupo Id"
+          },
+          "titulo": {
+            "type": "string",
+            "title": "Titulo"
+          },
+          "descripcion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descripcion"
+          },
+          "fecha_limite": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Limite"
+          },
+          "margen_tardia_horas": {
+            "type": "number",
+            "title": "Margen Tardia Horas"
+          },
+          "cierre_entrega": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cierre Entrega"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tarea_id",
+          "grupo_id",
+          "titulo",
+          "descripcion",
+          "fecha_limite",
+          "margen_tardia_horas",
+          "cierre_entrega"
+        ],
+        "title": "Tarea"
+      },
+      "TareaNueva": {
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Titulo"
+          },
+          "descripcion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descripcion"
+          },
+          "fecha_limite": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Limite"
+          },
+          "margen_tardia_horas": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8760.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margen Tardia Horas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "titulo",
+          "fecha_limite"
+        ],
+        "title": "TareaNueva"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Token JWT de POST /auth/login (#11)",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
