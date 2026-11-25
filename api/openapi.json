@@ -935,6 +935,124 @@
           }
         }
       }
+    },
+    "/admin/inscripciones": {
+      "post": {
+        "tags": [
+          "administrador"
+        ],
+        "summary": "Inscribir a un alumno",
+        "description": "Inscribe a cualquier alumno en un grupo de su carrera (alumno_id y grupo_id en el body).",
+        "operationId": "inscribir_admin_inscripciones_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InscripcionPorAdmin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InscripcionCreada"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "409": {
+            "description": "Regla de negocio: duplicado o entrega fuera de tiempo"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/admin/alumnos/{alumno_id}/datos": {
+      "get": {
+        "tags": [
+          "administrador"
+        ],
+        "summary": "Datos personales de un alumno",
+        "description": "Nombre y apellidos descifrados por la base (fn_datos_alumno).",
+        "operationId": "datos_alumno_admin_alumnos__alumno_id__datos_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alumno_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Alumno Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatosDeAlumno"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin token o token inválido (inicia sesión en /auth/login)"
+          },
+          "403": {
+            "description": "Tu rol no tiene permiso para esta operación"
+          },
+          "404": {
+            "description": "No existe o no es tuyo (no se revela cuál de los dos)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1123,6 +1241,35 @@
           "validada"
         ],
         "title": "CalificacionRegistrada"
+      },
+      "DatosDeAlumno": {
+        "properties": {
+          "alumno_id": {
+            "type": "integer",
+            "title": "Alumno Id"
+          },
+          "matricula": {
+            "type": "string",
+            "title": "Matricula"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "apellidos": {
+            "type": "string",
+            "title": "Apellidos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alumno_id",
+          "matricula",
+          "nombre",
+          "apellidos"
+        ],
+        "title": "DatosDeAlumno",
+        "description": "Lo que regresa fn_datos_alumno (nombre y apellidos ya descifrados por la base)."
       },
       "Distribucion": {
         "properties": {
@@ -1402,6 +1549,29 @@
         ],
         "title": "InscripcionNueva",
         "description": "El alumno se inscribe a sí mismo: no manda alumno_id (sale del token)."
+      },
+      "InscripcionPorAdmin": {
+        "properties": {
+          "grupo_id": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "exclusiveMinimum": 0.0,
+            "title": "Grupo Id"
+          },
+          "alumno_id": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "exclusiveMinimum": 0.0,
+            "title": "Alumno Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "grupo_id",
+          "alumno_id"
+        ],
+        "title": "InscripcionPorAdmin"
       },
       "MateriaBoleta": {
         "properties": {
