@@ -58,6 +58,8 @@ Copia `.env.example` como `.env` (git lo ignora) y llénalo. La API entra
 | `SIGAF_PASS_API` | sí | Contraseña de `sigaf_api_svc` (12+ caracteres) |
 | `SIGAF_LLAVE_DATOS` | sí | Llave AES-256 de datos personales (32+) |
 | `SIGAF_LLAVE_SEUDONIMO` | sí | Llave HMAC de la matrícula (32+) |
+| `SIGAF_JWT_LLAVE` | sí | Llave que firma los tokens de sesión, HS256 (32+) |
+| `SIGAF_JWT_MINUTOS` | no | Vida del token en minutos, 5 a 1440 (default 60) |
 | `SIGAF_DB_HOST` / `SIGAF_DB_PORT` / `SIGAF_DB_NOMBRE` | no | `localhost` / `5432` / `postgres` |
 | `SIGAF_DB_SSLMODE` | no | `require` (default), `verify-ca` o `verify-full`. Nunca sin TLS |
 | `SIGAF_DB_SSLROOTCERT` | con `verify-*` | Ruta a `ca.crt` de `infra/postgres/certs` |

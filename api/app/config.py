@@ -19,6 +19,8 @@ from psycopg.conninfo import make_conninfo
 USUARIO_API = "sigaf_api_svc"
 LARGO_MINIMO_LLAVE = 32
 LARGO_MINIMO_CONTRASENA = 12          # el mismo mínimo que exige db/06_credenciales.sql
+JWT_MINUTOS_DEFECTO = 60              # vida del token de sesión (issue #11)
+JWT_MINUTOS_MIN, JWT_MINUTOS_MAX = 5, 1440
 SSLMODES_PERMITIDOS = ("require", "verify-ca", "verify-full")   # nunca disable/allow/prefer
 
 
@@ -37,6 +39,8 @@ class Configuracion:
     db_pool_max: int
     llave_datos: str = field(repr=False)
     llave_seudonimo: str = field(repr=False)
+    jwt_llave: str = field(repr=False)       # firma los tokens de sesión (HS256)
+    jwt_minutos: int
     mongo_uri: str = field(repr=False)
     mongo_db: str
     origenes_cors: tuple[str, ...]
@@ -64,7 +68,8 @@ class Configuracion:
         def leer(nombre: str, defecto: str = "") -> str:
             return env.get(nombre, "").strip() or defecto
 
-        obligatorias = ("SIGAF_PASS_API", "SIGAF_LLAVE_DATOS", "SIGAF_LLAVE_SEUDONIMO")
+        llaves = ("SIGAF_LLAVE_DATOS", "SIGAF_LLAVE_SEUDONIMO", "SIGAF_JWT_LLAVE")
+        obligatorias = ("SIGAF_PASS_API", *llaves)
         faltan = [nombre for nombre in obligatorias if not env.get(nombre)]
         if faltan:
             raise ConfiguracionError(f"Faltan variables de entorno: {', '.join(faltan)}")
@@ -73,7 +78,7 @@ class Configuracion:
             raise ConfiguracionError(
                 f"SIGAF_PASS_API debe tener al menos {LARGO_MINIMO_CONTRASENA} caracteres"
             )
-        for nombre in ("SIGAF_LLAVE_DATOS", "SIGAF_LLAVE_SEUDONIMO"):
+        for nombre in llaves:
             if len(env[nombre]) < LARGO_MINIMO_LLAVE:
                 raise ConfiguracionError(
                     f"{nombre} debe tener al menos {LARGO_MINIMO_LLAVE} caracteres"
@@ -102,6 +107,9 @@ class Configuracion:
             db_pool_max=_entero(leer("SIGAF_DB_POOL_MAX", "10"), "SIGAF_DB_POOL_MAX", 1, 50),
             llave_datos=env["SIGAF_LLAVE_DATOS"],
             llave_seudonimo=env["SIGAF_LLAVE_SEUDONIMO"],
+            jwt_llave=env["SIGAF_JWT_LLAVE"],
+            jwt_minutos=_entero(leer("SIGAF_JWT_MINUTOS", str(JWT_MINUTOS_DEFECTO)),
+                                "SIGAF_JWT_MINUTOS", JWT_MINUTOS_MIN, JWT_MINUTOS_MAX),
             mongo_uri=leer("SIGAF_MONGO_URI", "mongodb://localhost:27017"),
             mongo_db=leer("SIGAF_MONGO_DB", "sigaf_analitica"),
             origenes_cors=origenes,

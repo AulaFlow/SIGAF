@@ -11,6 +11,7 @@ def entorno(**cambios: str | None) -> dict[str, str]:
         "SIGAF_PASS_API": CONTRASENA,
         "SIGAF_LLAVE_DATOS": "d" * 32,
         "SIGAF_LLAVE_SEUDONIMO": "s" * 32,
+        "SIGAF_JWT_LLAVE": "j" * 32,
     }
     env.update(cambios)
     return {k: v for k, v in env.items() if v is not None}
@@ -24,6 +25,7 @@ def test_defaults_de_desarrollo_con_tls():
     assert config.mongo_uri == "mongodb://localhost:27017"
     assert config.mongo_db == "sigaf_analitica"
     assert config.origenes_cors == ()
+    assert config.jwt_minutos == 60
 
 
 def test_dsn_siempre_como_sigaf_api_svc_y_con_tls():
@@ -65,7 +67,9 @@ def test_variables_vacias_toman_el_default():
     assert config.db_sslmode == "require" and config.db_sslrootcert is None
 
 
-@pytest.mark.parametrize("falta", ["SIGAF_PASS_API", "SIGAF_LLAVE_DATOS", "SIGAF_LLAVE_SEUDONIMO"])
+@pytest.mark.parametrize(
+    "falta", ["SIGAF_PASS_API", "SIGAF_LLAVE_DATOS", "SIGAF_LLAVE_SEUDONIMO", "SIGAF_JWT_LLAVE"]
+)
 def test_falta_variable_obligatoria(falta):
     with pytest.raises(ConfiguracionError, match=falta):
         Configuracion.desde_entorno(entorno(**{falta: None}))
@@ -76,14 +80,20 @@ def test_contrasena_corta_rechazada():
         Configuracion.desde_entorno(entorno(SIGAF_PASS_API="corta"))
 
 
-def test_llave_corta_rechazada():
-    with pytest.raises(ConfiguracionError, match="32"):
-        Configuracion.desde_entorno(entorno(SIGAF_LLAVE_DATOS="corta"))
+@pytest.mark.parametrize("llave", ["SIGAF_LLAVE_DATOS", "SIGAF_LLAVE_SEUDONIMO", "SIGAF_JWT_LLAVE"])
+def test_llave_corta_rechazada(llave):
+    with pytest.raises(ConfiguracionError, match=f"{llave}.*32"):
+        Configuracion.desde_entorno(entorno(**{llave: "corta"}))
+
+
+def test_minutos_del_jwt():
+    assert Configuracion.desde_entorno(entorno(SIGAF_JWT_MINUTOS="15")).jwt_minutos == 15
 
 
 @pytest.mark.parametrize(
     ("variable", "valor"),
-    [("SIGAF_DB_PORT", "abc"), ("SIGAF_DB_PORT", "70000"), ("SIGAF_DB_POOL_MAX", "0")],
+    [("SIGAF_DB_PORT", "abc"), ("SIGAF_DB_PORT", "70000"), ("SIGAF_DB_POOL_MAX", "0"),
+     ("SIGAF_JWT_MINUTOS", "4"), ("SIGAF_JWT_MINUTOS", "1441"), ("SIGAF_JWT_MINUTOS", "x")],
 )
 def test_enteros_invalidos(variable, valor):
     with pytest.raises(ConfiguracionError, match=variable):
@@ -106,3 +116,4 @@ def test_repr_no_expone_secretos():
     texto = repr(Configuracion.desde_entorno(entorno()))
     assert "segura" not in texto
     assert "d" * 32 not in texto and "s" * 32 not in texto
+    assert "j" * 32 not in texto

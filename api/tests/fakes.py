@@ -26,6 +26,8 @@ def configuracion(**cambios: object) -> Configuracion:
         "db_pool_max": 2,
         "llave_datos": LLAVE,
         "llave_seudonimo": "y" * 32,
+        "jwt_llave": "j" * 32,
+        "jwt_minutos": 60,
         "mongo_uri": "mongodb://localhost:27017",
         "mongo_db": "sigaf_analitica",
         "origenes_cors": (),
