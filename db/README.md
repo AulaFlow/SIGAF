@@ -4,8 +4,8 @@ Scripts SQL (esquema, fragmentación, replicación, triggers), MongoDB y `docker
 
 ## Orden de carga
 
-`01_tablas` → `02_indices` → `03_funciones_triggers` → `05_seguridad` → `06_credenciales` → `07_margen_entrega`.
-`pruebas.sql` (P1–P14) y luego `pruebas_seguridad.sql` (S1–S9) se corren sobre una base recién cargada.
+`01_tablas` → `02_indices` → `03_funciones_triggers` → `05_seguridad` → `06_credenciales` → `07_margen_entrega` → `08_bitacora_acceso`.
+`pruebas.sql` (P1–P14) y luego `pruebas_seguridad.sql` (S1–S10) se corren sobre una base recién cargada.
 
 ## Regla: margen de entrega tardía (`07_margen_entrega.sql`)
 
