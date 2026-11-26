@@ -164,3 +164,11 @@ Requieren `db/07_margen_entrega.sql` aplicado y TLS activo en `sigaf-db`:
 set -a; source .env; set +a
 pytest tests/test_integracion_postgres.py -v --no-cov
 ```
+
+`tests/test_integracion_auth.py` (login, #11) además necesita `db/08_bitacora_acceso.sql` y
+`db/pruebas.sql` cargados, con `SIGAF_LLAVE_DATOS` y `SIGAF_LLAVE_SEUDONIMO` iguales a las de
+`pruebas.sql`. Entra con la contraseña de desarrollo de `db/README.md` y no deja renglones en
+`bitacora_acceso` (cada transacción termina en rollback).
+
+En Windows usa `SIGAF_DB_HOST=127.0.0.1` y no `localhost`: `localhost` puede resolverse a
+`::1` y la conexión se queda esperando si Docker solo publica el puerto en IPv4.
