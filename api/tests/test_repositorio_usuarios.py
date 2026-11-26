@@ -27,7 +27,7 @@ def test_sql_solo_con_parametros(sql):
 
 
 def test_registrar_acceso_no_usa_returning():
-    # sigaf_api no tiene SELECT en bitacora_acceso (db/08): RETURNING fallaría.
+    # sigaf_api no tiene SELECT en bitacora_acceso (db/09): RETURNING fallaría.
     assert "RETURNING" not in SQL_REGISTRAR_ACCESO.upper()
 
 

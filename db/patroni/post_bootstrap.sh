@@ -1,6 +1,6 @@
 #!/bin/bash
 # Patroni lo corre UNA vez, en el primer nodo que crea el fragmento.
-# Carga el esquema y la seguridad de Ricardo (orden: 01 02 03 05 06 07 08).
+# Carga el esquema y la seguridad de Ricardo (orden: 01 02 03 05 06 07 09; el 08 está reservado).
 # synchronous_commit=local: al crear el fragmento todavía no hay réplica y,
 # con CP estricto, cualquier escritura se quedaría esperando.
 set -euo pipefail
@@ -15,5 +15,5 @@ correr -v pass_admin="$SIGAF_PASS_ADMIN" -v pass_api="$SIGAF_PASS_API" \
        -v pass_etl="$SIGAF_PASS_ETL" -v pass_repl="$SIGAF_PASS_REPL" \
        -f /sigaf-sql/06_credenciales.sql
 correr -f /sigaf-sql/07_margen_entrega.sql
-correr -f /sigaf-sql/08_bitacora_acceso.sql
+correr -f /sigaf-sql/09_bitacora_acceso.sql
 echo "[sigaf] esquema y seguridad cargados en $(hostname)"

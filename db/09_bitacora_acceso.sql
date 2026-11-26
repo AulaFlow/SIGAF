@@ -1,5 +1,5 @@
 -- =====================================================================
--- SIGAF · db/08_bitacora_acceso.sql  (issue #11, Salva)
+-- SIGAF · db/09_bitacora_acceso.sql  (issue #11, Salva)
 -- Bitácora de accesos: un renglón por cada intento de inicio de sesión
 -- en POST /auth/login, bueno o malo.
 --
@@ -18,7 +18,9 @@
 -- porque en un intento fallido no hay centro para elegir otro.
 --
 -- Cambio trazable: no edita 01 ni 05. Re-ejecutable.
--- Orden de carga: 01 -> 02 -> 03 -> 05 -> 06 -> 07 -> 08
+-- Orden de carga: 01 -> 02 -> 03 -> 05 -> 06 -> 07 -> (08) -> 09
+-- El 08 está reservado para db/08_permisos_admin.sql (Ricardo, #7). Este
+-- archivo no depende de él: funciona con o sin el 08 cargado.
 -- =====================================================================
 SET search_path TO sigaf;
 

@@ -200,7 +200,7 @@ def test_no_es_hash_bcrypt(texto):
 
 
 def test_motivos_iguales_al_check_de_la_base():
-    sql = (Path(__file__).resolve().parents[2] / "db" / "08_bitacora_acceso.sql").read_text(
+    sql = (Path(__file__).resolve().parents[2] / "db" / "09_bitacora_acceso.sql").read_text(
         encoding="utf-8")
     for motivo in Motivo:
         assert f"'{motivo.value}'" in sql

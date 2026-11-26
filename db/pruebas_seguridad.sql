@@ -162,7 +162,7 @@ BEGIN
     RAISE NOTICE 'S9b OK: cada alumno ve solo sus propios datos personales';
 END $$;
 
--- S10. Bitácora de accesos (08): la API solo inserta, nadie la altera
+-- S10. Bitácora de accesos (09): la API solo inserta, nadie la altera
 DO $$
 BEGIN
     ASSERT pg_temp.puede('sigaf_api',

@@ -36,7 +36,7 @@ SQL_PROFESOR_DE_USUARIO = """
     WHERE p.usuario_id = %s
 """
 
-# sigaf_api solo tiene INSERT en esta tabla (db/08): nada de RETURNING, que pide SELECT.
+# sigaf_api solo tiene INSERT en esta tabla (db/09): nada de RETURNING, que pide SELECT.
 SQL_REGISTRAR_ACCESO = """
     INSERT INTO bitacora_acceso (usuario_id, exito, motivo, ip)
     VALUES (%s, %s, %s, %s)

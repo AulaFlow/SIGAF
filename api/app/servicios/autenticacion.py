@@ -50,7 +50,7 @@ HASH_FALSO = b"$2b$12$kdbS2UMGlsz9rYeBhkRw2O9Hc5cnNDndChV0slR7sbKHTBNUWLx3S"
 
 
 class Motivo(StrEnum):
-    """Los mismos valores que el CHECK de bitacora_acceso.motivo (db/08)."""
+    """Los mismos valores que el CHECK de bitacora_acceso.motivo (db/09)."""
 
     OK = "ok"
     SIN_USUARIO = "sin_usuario"

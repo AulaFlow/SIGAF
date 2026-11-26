@@ -84,7 +84,7 @@ def test_perfil_de_alumno_y_profesor_con_en_todos(bd_real):
 
 
 def test_la_api_no_puede_leer_la_bitacora_de_accesos(bd_real):
-    # db/08: sigaf_api solo inserta. Leerla tiene que fallar por permisos.
+    # db/09: sigaf_api solo inserta. Leerla tiene que fallar por permisos.
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         with bd_real.transaccion() as cur:
             cur.execute("SELECT count(*) FROM bitacora_acceso")

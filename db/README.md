@@ -4,7 +4,8 @@ Scripts SQL (esquema, fragmentación, replicación, triggers), MongoDB y `docker
 
 ## Orden de carga
 
-`01_tablas` → `02_indices` → `03_funciones_triggers` → `05_seguridad` → `06_credenciales` → `07_margen_entrega` → `08_bitacora_acceso`.
+`01_tablas` → `02_indices` → `03_funciones_triggers` → `05_seguridad` → `06_credenciales` → `07_margen_entrega` → `09_bitacora_acceso`.
+El número 08 está reservado para `08_permisos_admin.sql` (#7, pendiente de decisión); el 09 no depende de él.
 `pruebas.sql` (P1–P14) y luego `pruebas_seguridad.sql` (S1–S10) se corren sobre una base recién cargada.
 
 ## Cuentas para probar el inicio de sesión (`pruebas.sql`, #11)
