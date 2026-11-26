@@ -82,6 +82,8 @@ postgresql:
     - hostssl all sigaf_api_svc 0.0.0.0/0 scram-sha-256
     - hostssl all sigaf_etl_svc 0.0.0.0/0 scram-sha-256
     - hostssl all sigaf_dba 0.0.0.0/0 scram-sha-256
+    # Respaldos (issue #26): solo desde la red de Docker/LAN y solo con TLS
+    - hostssl all sigaf_respaldo 192.168.0.0/16 scram-sha-256
     - hostnossl all all 0.0.0.0/0 reject
     - host all all 0.0.0.0/0 reject
 YAML
