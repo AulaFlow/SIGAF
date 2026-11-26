@@ -95,7 +95,7 @@ TODAS = RUTAS_ALUMNO + RUTAS_PROFESOR + RUTAS_ESTADISTICAS
 
 @pytest.mark.parametrize(("metodo", "ruta"), TODAS)
 def test_sin_sesion_responde_401(e, metodo, ruta):
-    # Mientras el #11 no llegue, usuario_actual() provisional siempre dice 401.
+    # Sin encabezado Authorization: usuario_actual() responde 401 (#11).
     r = e.como(None).request(metodo, ruta, json={})
     assert r.status_code == 401
     assert r.headers["www-authenticate"] == "Bearer"

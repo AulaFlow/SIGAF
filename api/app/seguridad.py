@@ -1,14 +1,16 @@
 """Quién hace la petición: usuario_actual() y requiere_rol() (issue #11, Salva).
 
-ARCHIVO PROVISIONAL (issue #23, alex). Las rutas ya dependen de estas firmas, pero
-el login con JWT lo hace Salva en el #11 y reemplazará el contenido de usuario_actual().
-Mientras tanto toda ruta protegida responde 401: en el código de la app no hay ningún
-usuario falso (los de prueba viven solo en tests/, con dependency_overrides).
-
-Acuerdo con el #11:
+Las firmas las fijó el #23 (alex) y las rutas dependen de ellas:
 - usuario_actual() regresa Alumno, Profesor o Administrador armado con los datos del
-  token (nunca del body ni de la URL). Sin token válido: 401.
+  token JWT (nunca del body ni de la URL). Sin token válido: 401.
 - requiere_rol(*roles) deja pasar solo esos roles. Rol equivocado: 403.
+
+En el código de la app no hay ningún usuario falso: los de prueba viven solo en
+tests/, con dependency_overrides.
+
+Decisión: el token no se revisa contra la base en cada petición (sin estado). Si un
+administrador desactiva una cuenta, su token sigue sirviendo hasta que venza; por eso
+la vida del token es corta (SIGAF_JWT_MINUTOS, 60 por defecto).
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .dominio.personas import Administrador, Alumno, Persona, Profesor, Rol
@@ -99,10 +101,18 @@ def _persona_de(claims: dict[str, Any]) -> Persona:
 
 
 def usuario_actual(
+    request: Request,
     credenciales: Annotated[HTTPAuthorizationCredentials | None, Depends(esquema_bearer)],
 ) -> Persona:
-    """Lee el token y regresa la persona. Provisional: siempre 401 hasta el #11."""
-    raise NO_AUTENTICADO
+    """Lee el token de 'Authorization: Bearer <token>' y regresa la persona.
+
+    esquema_bearer da None si no hay encabezado o si no es Bearer (auto_error=False),
+    así el 401 siempre sale de aquí y con el mismo formato.
+    """
+    if credenciales is None:
+        raise NO_AUTENTICADO
+    llave = request.app.state.config.jwt_llave   # la guarda crear_app()
+    return persona_desde_token(credenciales.credentials, llave)
 
 
 UsuarioActual = Annotated[Persona, Depends(usuario_actual)]

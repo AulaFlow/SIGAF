@@ -1,13 +1,19 @@
 """Token de sesión (issue #11): crear_token() y persona_desde_token()."""
 
 from datetime import UTC, datetime, timedelta
+from unittest.mock import Mock
 
 import jwt
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 from app.dominio.personas import Administrador, Alumno, Profesor
+from app.main import crear_app
+from app.rutas.servicios import servicio_alumno
 from app.seguridad import ALGORITMO, crear_token, persona_desde_token
+from app.servicios.alumno import ServicioAlumno
+from tests.fakes import configuracion, mongo_falso
 
 LLAVE = "j" * 32
 OTRA_LLAVE = "k" * 32
@@ -117,3 +123,57 @@ def test_claims_invalidos(cambio):
 @pytest.mark.parametrize("basura", ["", "abc", "a.b.c", "Bearer x.y.z"])
 def test_texto_que_no_es_token(basura):
     assert_401(basura)
+
+
+# --- usuario_actual(): el token de verdad pasa por la app ------------------
+# Aquí NO se reemplaza usuario_actual con dependency_overrides: el encabezado
+# Authorization recorre HTTPBearer -> usuario_actual -> requiere_rol -> la ruta.
+
+@pytest.fixture
+def app_y_servicio() -> tuple[TestClient, Mock]:
+    app = crear_app(configuracion(jwt_llave=LLAVE), fabrica_pool=lambda config: None,
+                    fabrica_mongo=mongo_falso)
+    servicio = Mock(spec=ServicioAlumno)
+    servicio.boleta.return_value = []
+    app.dependency_overrides[servicio_alumno] = lambda: servicio
+    return TestClient(app), servicio
+
+
+def con_token(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_token_valido_llega_a_la_ruta_con_la_persona_del_token(app_y_servicio):
+    cliente, servicio = app_y_servicio
+    r = cliente.get("/alumno/boleta", headers=con_token(crear_token(ALUMNO, LLAVE, 60)))
+    assert r.status_code == 200
+    (alumno,), _ = servicio.boleta.call_args
+    assert isinstance(alumno, Alumno) and alumno.alumno_id == 7 and alumno.centro_academico_id == 2
+
+
+def test_token_valido_con_rol_equivocado_da_403(app_y_servicio):
+    cliente, servicio = app_y_servicio
+    r = cliente.get("/alumno/boleta", headers=con_token(crear_token(PROFESOR, LLAVE, 60)))
+    assert r.status_code == 403
+    servicio.boleta.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "encabezados",
+    [
+        {},                                                         # sin encabezado
+        {"Authorization": "Bearer"},                                # sin token
+        {"Authorization": "Basic YWRtaW46YWRtaW4="},                # otro esquema
+        con_token("a.b.c"),                                         # basura
+        con_token(crear_token(ALUMNO, OTRA_LLAVE, 60)),             # otra llave
+        con_token(crear_token(ALUMNO, LLAVE, 60,
+                              ahora=datetime.now(UTC) - timedelta(hours=2))),   # vencido
+    ],
+    ids=["sin-encabezado", "sin-token", "basic", "basura", "otra-llave", "vencido"],
+)
+def test_sin_token_valido_da_401_y_no_llega_al_servicio(app_y_servicio, encabezados):
+    cliente, servicio = app_y_servicio
+    r = cliente.get("/alumno/boleta", headers=encabezados)
+    assert r.status_code == 401
+    assert r.headers["www-authenticate"] == "Bearer"
+    servicio.boleta.assert_not_called()

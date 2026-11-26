@@ -19,7 +19,7 @@ app/
   servicios/           casos de uso por rol: alumno, profesor, inscripciones, estadísticas
   datos/mongo.py       lectura de MongoDB (pymongo): consultas y pipelines fijos
   rutas/               capa HTTP (#23): alumno, profesor, estadísticas; solo llaman servicios
-  seguridad.py         usuario_actual() y requiere_rol() (login JWT del #11; hoy provisional)
+  seguridad.py         usuario_actual() y requiere_rol() (la persona sale del token JWT, #11)
 scripts/exportar_openapi.py  genera openapi.json para la app de Flutter
 ```
 
