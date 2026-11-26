@@ -1,0 +1,19 @@
+# Lo que NO entra a la imagen (issue #28): secretos, pruebas y basura local
+.env
+.env.*
+*.key
+*.pem
+tests/
+scripts/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+openapi.json
+README.md
+requirements-dev.txt
+pyproject.toml

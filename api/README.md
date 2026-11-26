@@ -147,7 +147,37 @@ El administrador no tiene centro, así que su token no dice a qué fragmento ir.
   `db/08_permisos_admin.sql` (decisión de seguridad pendiente); sin él, la base niega el
   permiso y la API responde 500.
 
-## Correr
+## Correr con Docker (issue #28)
+
+La API es un servicio más de `db/docker-compose.yml`. Las variables salen de
+`db/.env` (copia `db/.env.example`): además de las contraseñas de la base hacen
+falta `SIGAF_LLAVE_DATOS` y `SIGAF_LLAVE_SEUDONIMO`, **las mismas** con las que
+se cargaron los datos.
+
+```bash
+cd db
+docker compose up -d --build          # levanta todo, también la API
+curl http://localhost:8000/health     # {"status":"ok"}; docs en http://localhost:8000/docs
+docker compose logs -f api
+```
+
+Cómo queda:
+
+- Imagen `python:3.12-slim`, usuario `sigaf` (no root), sin secretos: `.env`,
+  pruebas y llaves no entran (`api/.dockerignore`). pytest y httpx viven en
+  `requirements-dev.txt`, así la imagen solo trae lo que la app usa.
+- Entra como `sigaf_api_svc` a A por `haproxy:5432` y, con `directorio_fragmento`,
+  a B por `haproxy:5434`. **TLS obligatorio** con `verify-ca`: revisa que el
+  certificado lo firmó la CA de SIGAF. No es `verify-full` porque los
+  certificados dicen `pg-a1`, `pg-b1`... y no `haproxy` (igual que el ETL).
+- Solo monta el volumen `ca-publica`, que tiene únicamente `ca.crt`; nunca ve
+  `ca.key` ni las llaves de los nodos.
+- El puerto 8000 solo escucha en `127.0.0.1` (el emulador de Android entra por
+  `10.0.2.2:8000`). Todavía sin HTTPS: va con Seguridad.
+- `restart: unless-stopped`: si la base aún no está lista, la API falla al
+  arrancar y Docker la vuelve a levantar sola. El healthcheck pega a `/health`.
+
+## Correr sin Docker (desarrollo)
 
 ```bash
 cd api

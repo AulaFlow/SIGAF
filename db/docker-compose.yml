@@ -6,12 +6,14 @@
 #   haproxy ........ puerta fija: 5432/5433 = A primario/réplica, 5434/5435 = B
 #   mongo .......... base de análisis (issue #8); la llena el ETL de datos/analitica
 #   respaldos ...... pg_dump de A y B cada 24 h, desde la réplica y con TLS (issue #26)
+#   api ............ FastAPI en http://localhost:8000, entra a A y B por HAProxy con TLS (#28)
 #
 # Uso:  cd db && docker compose up -d --build
 #       docker compose exec pg-a1 patronictl list      (quién es primario)
 #       bash patroni/prueba_caida.sh                    (prueba de caída)
 #       bash monitoreo/estado.sh                        (monitoreo, issue #26)
 #       docker compose exec respaldos respaldar.sh una  (respaldo ahora mismo)
+#       curl http://localhost:8000/health                (la API, issue #28)
 name: sigaf
 
 x-nodo: &nodo
@@ -31,6 +33,8 @@ x-nodo: &nodo
 
 services:
   # Genera la CA y un certificado por nodo con el script de Ricardo (una vez).
+  # Además copia SOLO ca.crt (público) al volumen ca-publica (issue #28): así
+  # la API puede verificar a los nodos sin tener montados ca.key ni las llaves.
   certificados:
     build: ./patroni
     image: sigaf-patroni:16
@@ -38,12 +42,17 @@ services:
     command:
       - |
         set -e
-        if [ -f /out/certs/pg-b2.crt ]; then echo "certificados ya existen"; exit 0; fi
-        sed 's/\r$$//' /infra/generar_certificados.sh > /out/generar_certificados.sh
-        bash /out/generar_certificados.sh pg-a1 pg-a2 pg-b1 pg-b2
+        if [ -f /out/certs/pg-b2.crt ]; then
+          echo "certificados ya existen"
+        else
+          sed 's/\r$$//' /infra/generar_certificados.sh > /out/generar_certificados.sh
+          bash /out/generar_certificados.sh pg-a1 pg-a2 pg-b1 pg-b2
+        fi
+        install -m 644 /out/certs/ca.crt /out/ca-publica/ca.crt
     volumes:
       - ../infra/postgres:/infra:ro
       - certs:/out/certs
+      - ca-publica:/out/ca-publica
 
   etcd:
     image: gcr.io/etcd-development/etcd:v3.5.17
@@ -127,6 +136,38 @@ services:
       - respaldos:/respaldos
     depends_on: [pg-a1, pg-a2, pg-b1, pg-b2]
 
+  # API (issue #28). Entra como sigaf_api_svc a A (haproxy:5432) y, con el
+  # directorio_fragmento, a B (haproxy:5434). TLS obligatorio con verify-ca:
+  # los certificados dicen pg-a1/pg-b1..., no "haproxy", por eso no verify-full
+  # (decisión de alex, igual que el ETL). Solo monta ca-publica (nunca ca.key).
+  # Puerto solo en 127.0.0.1 mientras no haya HTTPS (va con Seguridad).
+  api:
+    build: ../api
+    image: sigaf-api:0.1
+    restart: unless-stopped
+    environment:
+      SIGAF_PASS_API: ${SIGAF_PASS_API:?falta en .env}
+      SIGAF_LLAVE_DATOS: ${SIGAF_LLAVE_DATOS:?falta en .env}
+      SIGAF_LLAVE_SEUDONIMO: ${SIGAF_LLAVE_SEUDONIMO:?falta en .env}
+      SIGAF_JWT_LLAVE: ${SIGAF_JWT_LLAVE:?falta en .env}
+      SIGAF_JWT_MINUTOS: ${SIGAF_JWT_MINUTOS:-60}
+      SIGAF_DB_HOST: haproxy
+      SIGAF_DB_PORT: "5432"
+      SIGAF_DB_NOMBRE: postgres
+      SIGAF_DB_SSLMODE: verify-ca
+      SIGAF_DB_SSLROOTCERT: /ca/ca.crt
+      SIGAF_MONGO_URI: mongodb://sigaf:${SIGAF_PASS_MONGO:?falta en .env}@mongo:27017/?authSource=admin
+      SIGAF_MONGO_DB: sigaf_analitica
+      SIGAF_CORS_ORIGENES: ${SIGAF_CORS_ORIGENES:-http://localhost:8080}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ca-publica:/ca:ro
+    depends_on:
+      certificados: { condition: service_completed_successfully }
+      haproxy: { condition: service_started }
+      mongo: { condition: service_healthy }
+
 # La red usa 192.168.x para que coincida con el pg_hba.conf de Ricardo
 # (replicación solo desde 192.168.0.0/16 y la VPN 10.8.0.0/24).
 networks:
@@ -137,6 +178,7 @@ networks:
 
 volumes:
   certs:
+  ca-publica:
   etcd:
   pg-a1:
   pg-a2:
