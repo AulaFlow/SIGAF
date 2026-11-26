@@ -1,0 +1,15 @@
+# SIGAF · monitoreo (issue #26): misma configuración de estilo que api/
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--cov=graficas --cov-report=term-missing --cov-fail-under=60"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
