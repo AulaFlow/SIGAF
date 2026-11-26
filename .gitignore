@@ -36,3 +36,7 @@ mongodata/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Monitoreo (issue #26): el historial y las gráficas se generan en cada PC
+db/monitoreo/historial.csv
+db/monitoreo/salida/

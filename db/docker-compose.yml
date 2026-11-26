@@ -5,10 +5,13 @@
 #   pg-b1, pg-b2 ... fragmento B (CCEA, CCS, CCDC)
 #   haproxy ........ puerta fija: 5432/5433 = A primario/réplica, 5434/5435 = B
 #   mongo .......... base de análisis (issue #8); la llena el ETL de datos/analitica
+#   respaldos ...... pg_dump de A y B cada 24 h, desde la réplica y con TLS (issue #26)
 #
 # Uso:  cd db && docker compose up -d --build
 #       docker compose exec pg-a1 patronictl list      (quién es primario)
 #       bash patroni/prueba_caida.sh                    (prueba de caída)
+#       bash monitoreo/estado.sh                        (monitoreo, issue #26)
+#       docker compose exec respaldos respaldar.sh una  (respaldo ahora mismo)
 name: sigaf
 
 x-nodo: &nodo
@@ -21,6 +24,7 @@ x-nodo: &nodo
     SIGAF_PASS_ADMIN: ${SIGAF_PASS_ADMIN:?falta en .env}
     SIGAF_PASS_API: ${SIGAF_PASS_API:?falta en .env}
     SIGAF_PASS_ETL: ${SIGAF_PASS_ETL:?falta en .env}
+    SIGAF_PASS_RESPALDO: ${SIGAF_PASS_RESPALDO:?falta en .env}
   depends_on:
     etcd: { condition: service_started }
     certificados: { condition: service_completed_successfully }
@@ -105,6 +109,24 @@ services:
       timeout: 5s
       retries: 6
 
+  # Respaldos (issue #26). Misma imagen que los nodos (trae pg_dump 16), pero
+  # no arranca Patroni: solo corre respaldar.sh. Los .dump quedan en el
+  # volumen "respaldos" (fuera del repo: tienen datos de alumnos).
+  respaldos:
+    image: sigaf-patroni:16
+    restart: unless-stopped
+    entrypoint: ["bash", "-c", "sed 's/\\r$$//' /scripts/respaldar.sh > /usr/local/bin/respaldar.sh && chmod +x /usr/local/bin/respaldar.sh && exec respaldar.sh"]
+    environment:
+      SIGAF_PASS_RESPALDO: ${SIGAF_PASS_RESPALDO:?falta en .env}
+      INTERVALO: ${SIGAF_RESPALDO_INTERVALO:-86400}
+      GUARDAR: ${SIGAF_RESPALDO_GUARDAR:-7}
+      TZ: America/Mexico_City
+    volumes:
+      - ./respaldos:/scripts:ro
+      - certs:/certs:ro
+      - respaldos:/respaldos
+    depends_on: [pg-a1, pg-a2, pg-b1, pg-b2]
+
 # La red usa 192.168.x para que coincida con el pg_hba.conf de Ricardo
 # (replicación solo desde 192.168.0.0/16 y la VPN 10.8.0.0/24).
 networks:
@@ -121,3 +143,4 @@ volumes:
   pg-b1:
   pg-b2:
   mongo:
+  respaldos:
