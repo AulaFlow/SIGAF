@@ -149,6 +149,8 @@ services:
       SIGAF_PASS_API: ${SIGAF_PASS_API:?falta en .env}
       SIGAF_LLAVE_DATOS: ${SIGAF_LLAVE_DATOS:?falta en .env}
       SIGAF_LLAVE_SEUDONIMO: ${SIGAF_LLAVE_SEUDONIMO:?falta en .env}
+      SIGAF_JWT_LLAVE: ${SIGAF_JWT_LLAVE:?falta en .env}
+      SIGAF_JWT_MINUTOS: ${SIGAF_JWT_MINUTOS:-60}
       SIGAF_DB_HOST: haproxy
       SIGAF_DB_PORT: "5432"
       SIGAF_DB_NOMBRE: postgres

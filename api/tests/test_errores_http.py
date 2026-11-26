@@ -12,6 +12,7 @@ from starlette.requests import Request
 
 from app.dominio.excepciones import (
     CalificacionInvalidaError,
+    CredencialesInvalidasError,
     DatoInvalidoError,
     EntregaFueraDeTiempoError,
     InscripcionDuplicadaError,
@@ -93,3 +94,17 @@ def test_manejador_de_negocio_con_otra_excepcion_responde_500():
     peticion = Request({"type": "http", "method": "GET", "path": "/x", "headers": []})
     respuesta = asyncio.run(manejar_error_de_negocio(peticion, ValueError("x")))
     assert respuesta.status_code == 500
+
+
+def test_credenciales_invalidas_es_401_con_www_authenticate():
+    # Issue #11: Traduccion puede llevar encabezados; solo el 401 del login los usa.
+    r = _cliente(CredencialesInvalidasError("Correo o contraseña incorrectos")).get("/falla")
+    assert r.status_code == 401
+    assert r.json() == {"error": "credenciales_invalidas",
+                        "mensaje": "Correo o contraseña incorrectos"}
+    assert r.headers["www-authenticate"] == "Bearer"
+
+
+def test_los_demas_errores_no_mandan_www_authenticate():
+    r = _cliente(NoEncontradoError("No existe")).get("/falla")
+    assert "www-authenticate" not in r.headers

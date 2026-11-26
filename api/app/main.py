@@ -53,6 +53,7 @@ def crear_app(
                 abierto.close()
 
     app = FastAPI(title="SIGAF API", version="0.1.0", lifespan=lifespan)
+    app.state.config = config   # seguridad.py lee de aquí la llave del JWT (#11)
 
     # CORS para el cliente web de Flutter: solo los orígenes listados (nunca "*").
     app.add_middleware(

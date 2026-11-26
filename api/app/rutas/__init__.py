@@ -6,7 +6,8 @@ SQL ni consultas a MongoDB.
 """
 
 from .alumno import router as router_alumno
+from .auth import router as router_auth
 from .estadisticas import router as router_estadisticas
 from .profesor import router as router_profesor
 
-ROUTERS = (router_alumno, router_profesor, router_estadisticas)
+ROUTERS = (router_auth, router_alumno, router_profesor, router_estadisticas)
