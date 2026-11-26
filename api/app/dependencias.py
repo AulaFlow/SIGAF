@@ -1,6 +1,6 @@
 """Dependencias de FastAPI compartidas por las rutas.
 
-usuario_actual() y requiere_rol() las agrega Salva en el issue #11 (JWT y roles).
+La persona autenticada (usuario_actual, requiere_rol) vive en seguridad.py (#11).
 """
 
 from __future__ import annotations

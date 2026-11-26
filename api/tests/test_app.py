@@ -52,3 +52,9 @@ def test_lifespan_deja_lista_la_base_analitica():
     app, _ = _app_con_pool_falso()
     with TestClient(app):
         assert app.state.mongo_db.name == "sigaf_analitica"
+
+
+def test_la_app_guarda_su_configuracion():
+    # seguridad.py la lee de app.state para validar los tokens (#11).
+    app, _ = _app_con_pool_falso()
+    assert app.state.config.jwt_llave == "j" * 32

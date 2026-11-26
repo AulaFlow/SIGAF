@@ -51,14 +51,16 @@ INSERT INTO materia (carrera_id, clave, nombre, creditos, semestre_sugerido) VAL
     (1, 'ISC-702', 'Programación Python', 8, 7),
     (2, 'LAE-301', 'Contabilidad de Costos', 6, 3);
 
--- Hashes de ejemplo: no corresponden a contraseñas reales
+-- Hashes bcrypt (costo 12, una sal por cuenta) de la contraseña de DESARROLLO
+-- documentada en db/README.md, para probar POST /auth/login (#11).
+-- Solo para bases de prueba: nunca cargar este archivo en producción.
 INSERT INTO usuario (correo, hash_contrasena, rol_id) VALUES
-    ('admin@sigaf.test',   '$2b$12$hashDeEjemploNoReal', 3),
-    ('profe1@sigaf.test',  '$2b$12$hashDeEjemploNoReal', 2),
-    ('alumno1@sigaf.test', '$2b$12$hashDeEjemploNoReal', 1),
-    ('alumno2@sigaf.test', '$2b$12$hashDeEjemploNoReal', 1),
-    ('alumno3@sigaf.test', '$2b$12$hashDeEjemploNoReal', 1),
-    ('alumno4@sigaf.test', '$2b$12$hashDeEjemploNoReal', 1);
+    ('admin@sigaf.test',   '$2b$12$4EesZiPXjoJ/bULWxoNq/u2.FXEom6ur0j6MDguoCwCVJGyDehrEa', 3),
+    ('profe1@sigaf.test',  '$2b$12$LPD4MTs307FxuizXC/MaA.xxehhmttT49OuETtQ4Cdjz1DaZhh.3m', 2),
+    ('alumno1@sigaf.test', '$2b$12$AtjM.on52jo.J73Bmq9Oq.6BVXo0kLUrSqVCbQHLnlzJHOfqLAJOC', 1),
+    ('alumno2@sigaf.test', '$2b$12$d07di.e/Q4OqTsAdu7SauupVp4I6agj//Co5g17smrrc5BJWVPYQa', 1),
+    ('alumno3@sigaf.test', '$2b$12$o8is2POSUAbAJfc.BpUaQumDYTq2CukeYNH7DHFKpuanSe1MKoGoS', 1),
+    ('alumno4@sigaf.test', '$2b$12$nrB1.vFIbVAEKvaBgKLihOl8/uvj.FylrNQP0X6rxxRljD0lwroS.', 1);
 
 INSERT INTO profesor (usuario_id, centro_academico_id, num_empleado, nombre, apellidos) VALUES
     (2, 1, 'E-0001', 'Laura', 'Méndez Ruiz');

@@ -95,7 +95,7 @@ TODAS = RUTAS_ALUMNO + RUTAS_PROFESOR + RUTAS_ESTADISTICAS
 
 @pytest.mark.parametrize(("metodo", "ruta"), TODAS)
 def test_sin_sesion_responde_401(e, metodo, ruta):
-    # Mientras el #11 no llegue, usuario_actual() provisional siempre dice 401.
+    # Sin encabezado Authorization: usuario_actual() responde 401 (#11).
     r = e.como(None).request(metodo, ruta, json={})
     assert r.status_code == 401
     assert r.headers["www-authenticate"] == "Bearer"
@@ -337,13 +337,20 @@ def test_entregas_por_centro(e):
 def test_openapi_documenta_las_16_rutas_con_tag_resumen_y_bearer(e):
     esquema = e.app.openapi()
     operaciones = [(ruta, op) for ruta, metodos in esquema["paths"].items()
-                   if ruta != "/health" and not ruta.startswith("/admin")   # admin: #7
+                   if ruta not in ("/health", "/auth/login")    # sin token: #11
+                   and not ruta.startswith("/admin")                # admin: #7
                    for op in metodos.values()]
     assert len(operaciones) == 16
     for ruta, op in operaciones:
         assert op["tags"] and op["summary"], ruta
         assert op["security"] == [{"HTTPBearer": []}], ruta
         assert {"401", "403"} <= set(op["responses"]), ruta
+
+
+def test_openapi_login_no_pide_token(e):
+    op = e.app.openapi()["paths"]["/auth/login"]["post"]
+    assert "security" not in op                     # es la ruta para conseguir el token
+    assert {"200", "401", "422"} <= set(op["responses"])
 
 
 def test_exportar_openapi_escribe_el_json(tmp_path):

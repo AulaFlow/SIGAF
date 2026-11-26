@@ -12,6 +12,7 @@ SIN_SESION = {401: {"description": "Sin token o token inválido (inicia sesión 
 ROL = {403: {"description": "Tu rol no tiene permiso para esta operación"}}
 NO_ENCONTRADO = {404: {"description": "No existe o no es tuyo (no se revela cuál de los dos)"}}
 CONFLICTO = {409: {"description": "Regla de negocio: duplicado o entrega fuera de tiempo"}}
+CREDENCIALES = {401: {"description": "Correo o contraseña incorrectos (siempre el mismo mensaje)"}}
 SIN_ANALITICA = {503: {"description": "La base de análisis (MongoDB) no responde"}}
 
 

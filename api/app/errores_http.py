@@ -25,6 +25,7 @@ from fastapi.responses import JSONResponse
 
 from .dominio.excepciones import (
     CalificacionInvalidaError,
+    CredencialesInvalidasError,
     DatoInvalidoError,
     EntregaFueraDeTiempoError,
     InscripcionDuplicadaError,
@@ -47,9 +48,15 @@ class Traduccion:
     estado: int
     error: str
     mensaje_fijo: str | None = None   # None: se usa el mensaje de la excepción
+    # Encabezados extra de la respuesta. Vacío para casi todas; el 401 del login
+    # manda WWW-Authenticate como pide HTTP (#11). Tupla y no dict: Traduccion es frozen.
+    encabezados: tuple[tuple[str, str], ...] = ()
 
 
 TRADUCCIONES: dict[type[SigafError], Traduccion] = {
+    # Mismo 401 para correo inexistente, contraseña mala o cuenta inactiva (#11).
+    CredencialesInvalidasError: Traduccion(status.HTTP_401_UNAUTHORIZED, "credenciales_invalidas",
+                                           encabezados=(("WWW-Authenticate", "Bearer"),)),
     NoEncontradoError: Traduccion(status.HTTP_404_NOT_FOUND, "no_encontrado"),
     PermisoDenegadoError: Traduccion(status.HTTP_403_FORBIDDEN, "permiso_denegado"),
     EntregaFueraDeTiempoError: Traduccion(status.HTTP_409_CONFLICT, "entrega_fuera_de_tiempo"),
@@ -85,7 +92,8 @@ async def manejar_error_de_negocio(request: Request, exc: Exception) -> JSONResp
         log.warning("%s %s -> %s: %s", request.method, request.url.path,
                     type(exc).__name__, exc.mensaje)
     return JSONResponse(status_code=t.estado,
-                        content=cuerpo(t.error, t.mensaje_fijo or exc.mensaje))
+                        content=cuerpo(t.error, t.mensaje_fijo or exc.mensaje),
+                        headers=dict(t.encabezados) or None)
 
 
 async def manejar_error_inesperado(request: Request, exc: Exception) -> JSONResponse:
