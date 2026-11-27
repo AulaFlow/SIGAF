@@ -226,6 +226,16 @@ class _EntregaState extends State<EntregarPantalla> {
   }
 
   Future<void> mostrarExito(String estado) async {
+    final estadoVisible = switch (estado) {
+      'a_tiempo' => 'A tiempo',
+      'tardia' => 'Tardía',
+      _ => estado,
+    };
+    final colorEstado = estado == 'tardia' ? const Color(0xFFB45309) : verde;
+    final fondoEstado = estado == 'tardia'
+        ? const Color(0xFFFFEDD5)
+        : const Color(0xFFD1FAE5);
+
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -272,13 +282,13 @@ class _EntregaState extends State<EntregarPantalla> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFD1FAE5),
+                color: fondoEstado,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                'Estado: $estado',
-                style: const TextStyle(
-                  color: verde,
+                'Estado: $estadoVisible',
+                style: TextStyle(
+                  color: colorEstado,
                   fontWeight: FontWeight.bold,
                 ),
               ),

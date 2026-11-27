@@ -70,7 +70,7 @@ class _InicioState extends State<InicioPantalla> {
 
   Widget menuLateral(bool extendido) {
     return Container(
-      width: extendido ? 245 : 85,
+      width: extendido ? 245 : 110,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -140,7 +140,7 @@ class _InicioState extends State<InicioPantalla> {
                 backgroundColor: Colors.transparent,
                 extended: extendido,
                 minExtendedWidth: 225,
-                minWidth: 75,
+                minWidth: 110,
                 selectedIndex: index,
                 useIndicator: true,
                 indicatorColor: azul,
@@ -163,7 +163,12 @@ class _InicioState extends State<InicioPantalla> {
                   for (int i = 0; i < labels.length; i++)
                     NavigationRailDestination(
                       icon: Icon(icons[i]),
-                      label: Text(labels[i]),
+                      label: Text(
+                        labels[i],
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                 ],
               ),

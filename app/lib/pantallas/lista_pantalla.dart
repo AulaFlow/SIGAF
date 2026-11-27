@@ -266,7 +266,9 @@ class _ListaState extends State<ListaPantalla> {
                 ),
                 const SizedBox(height: 15),
                 Text(
-                  '${materias.length} materias registradas',
+                  materias.length == 1
+                      ? '1 materia registrada'
+                      : '${materias.length} materias registradas',
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ],
@@ -772,6 +774,19 @@ class _ListaState extends State<ListaPantalla> {
     );
   }
 
+  String fechaActualizacion(dynamic valor) {
+    final fecha = DateTime.tryParse('${valor ?? ''}')?.toLocal();
+    if (fecha == null) return 'No disponible';
+
+    final dia = fecha.day.toString().padLeft(2, '0');
+    final mes = fecha.month.toString().padLeft(2, '0');
+    final hora = fecha.hour % 12 == 0 ? 12 : fecha.hour % 12;
+    final minutos = fecha.minute.toString().padLeft(2, '0');
+    final periodo = fecha.hour < 12 ? 'a. m.' : 'p. m.';
+
+    return '$dia/$mes/${fecha.year} · $hora:$minutos $periodo';
+  }
+
   Widget avisoOffline(Resultado resultado) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -797,7 +812,7 @@ class _ListaState extends State<ListaPantalla> {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'Última actualización: ${resultado.fecha}',
+                  'Última actualización: ${fechaActualizacion(resultado.fecha)}',
                   style: const TextStyle(color: naranja, fontSize: 12),
                 ),
               ],
