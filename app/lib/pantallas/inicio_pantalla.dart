@@ -728,17 +728,27 @@ class _PanelState extends State<PanelAlumno> {
   }
 
   Widget tarjetaTarea(Map<String, dynamic> tarea) {
-    final fecha = DateTime.tryParse('${tarea['fecha_limite'] ?? ''}');
-
+    final fecha = DateTime.tryParse('${tarea['fecha_limite'] ?? ''}')
+        ?.toLocal();
     final ahora = DateTime.now();
 
-    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final cierre = DateTime.tryParse('${tarea['cierre_entrega'] ?? ''}')
+        ?.toLocal();
 
-    final diaLimite = fecha == null
-        ? null
-        : DateTime(fecha.year, fecha.month, fecha.day);
+    final cerrada = cierre != null && ahora.isAfter(cierre);
+    final fechaPasada = fecha != null && ahora.isAfter(fecha);
+    final tardia =
+        tarea['solo_tardia'] == true ||
+        (fechaPasada && cierre != null && !cerrada);
+    final vencida = cerrada || (fechaPasada && !tardia);
 
-    final vencida = diaLimite != null && diaLimite.isBefore(hoy);
+    final estado = cerrada
+        ? 'Entrega cerrada'
+        : tardia
+        ? 'Entrega tardía'
+        : vencida
+        ? 'Fecha vencida'
+        : 'Pendiente';
 
     final color = vencida ? Colors.red : naranja;
 
@@ -789,7 +799,7 @@ class _PanelState extends State<PanelAlumno> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            vencida ? 'Vencida' : 'Pendiente',
+            estado,
             style: TextStyle(
               color: vencida ? Colors.red.shade700 : const Color(0xFFB45309),
               fontSize: 11,
