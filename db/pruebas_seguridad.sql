@@ -162,4 +162,28 @@ BEGIN
     RAISE NOTICE 'S9b OK: cada alumno ve solo sus propios datos personales';
 END $$;
 
+-- S10. Bitácora de accesos (09): la API solo inserta, nadie la altera
+DO $$
+BEGIN
+    ASSERT pg_temp.puede('sigaf_api',
+        'INSERT INTO sigaf.bitacora_acceso (usuario_id, exito, motivo) VALUES (NULL, false, ''sin_usuario'')'),
+        'la API no pudo registrar un acceso';
+    ASSERT NOT pg_temp.puede('sigaf_api', 'SELECT * FROM sigaf.bitacora_acceso'), 'la API leyó la bitácora';
+    ASSERT NOT pg_temp.puede('sigaf_api', 'UPDATE sigaf.bitacora_acceso SET exito = true'),
+        'la API alteró la bitácora de accesos';
+    ASSERT NOT pg_temp.puede('sigaf_api', 'DELETE FROM sigaf.bitacora_acceso'),
+        'la API borró la bitácora de accesos';
+    ASSERT NOT pg_temp.puede('sigaf_admin', 'DELETE FROM sigaf.bitacora_acceso'),
+        'el administrador borró la bitácora de accesos';
+    ASSERT pg_temp.puede('sigaf_admin', 'SELECT * FROM sigaf.bitacora_acceso'), 'el administrador no la lee';
+    ASSERT NOT pg_temp.puede('sigaf_etl', 'SELECT * FROM sigaf.bitacora_acceso'), 'el ETL leyó accesos';
+    BEGIN
+        INSERT INTO bitacora_acceso (usuario_id, exito, motivo) VALUES (1, true, 'contrasena');
+        RAISE EXCEPTION 'S10 FALLÓ: aceptó un éxito con motivo de falla';
+    EXCEPTION WHEN check_violation THEN
+        RAISE NOTICE 'S10a OK: éxito y motivo siempre cuadran';
+    END;
+    RAISE NOTICE 'S10b OK: la API registra accesos pero no puede leerlos, cambiarlos ni borrarlos';
+END $$;
+
 \echo '== Todas las pruebas de seguridad pasaron =='

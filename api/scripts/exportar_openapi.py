@@ -21,7 +21,7 @@ from app.main import crear_app  # noqa: E402
 CONFIG_VACIA = Configuracion(
     db_host="localhost", db_puerto=5432, db_nombre="postgres", db_contrasena="-" * 16,
     db_sslmode="require", db_sslrootcert=None, db_pool_max=1, llave_datos="-" * 32,
-    llave_seudonimo="-" * 32, mongo_uri="mongodb://localhost:27017",
+    llave_seudonimo="-" * 32, jwt_llave="-" * 32, jwt_minutos=60, mongo_uri="mongodb://localhost:27017",
     mongo_db="sigaf_analitica", origenes_cors=(),
 )
 

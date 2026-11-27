@@ -29,6 +29,29 @@ jobs:
         run: pip-audit -r requirements.txt
       - name: Pruebas con cobertura mínima 60 %
         run: pytest -q
+  monitoreo:
+    name: Monitoreo de la base (gráficas)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: db/monitoreo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: db/monitoreo/requirements*.txt
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt ruff bandit pip-audit
+      - name: Estilo (ruff)
+        run: ruff check .
+      - name: Seguridad estática (bandit)
+        run: bandit -r . -c pyproject.toml
+      - name: Revisión de dependencias (pip-audit)
+        run: pip-audit -r requirements.txt
+      - name: Pruebas con cobertura mínima 60 %
+        run: pytest -q
 
   app:
     name: App (Flutter)

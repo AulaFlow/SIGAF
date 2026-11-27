@@ -109,3 +109,32 @@ def test_incluso_interrupciones_hacen_rollback(bd, pool):
         with bd.transaccion():
             raise KeyboardInterrupt
     assert pool.conexion.rollbacks == 1 and pool.devueltas == 1
+
+
+# --- en_todos() con una sola base (issue #11) --------------------------------
+
+def test_en_todos_con_una_sola_base_corre_una_vez(bd, pool):
+    # Antes solo existía en BaseDistribuida: con una sola base daba AttributeError (500).
+    llamadas = []
+
+    def consulta(cur):
+        llamadas.append(cur)
+        return [1, 2]
+
+    assert bd.en_todos(consulta) == [1, 2]
+    assert len(llamadas) == 1
+    assert pool.conexion.commits == 1 and pool.prestadas == pool.devueltas == 1
+
+
+def test_en_todos_con_una_sola_base_pone_las_variables_de_la_persona(bd, pool):
+    bd.en_todos(lambda cur: [], Alumno(1, "a@sigaf.test", alumno_id=7))
+    assert (SET_CONFIG, ("sigaf.alumno_sesion", "7")) in pool.conexion.cursor_falso.ejecutadas
+
+
+def test_en_todos_con_una_sola_base_hace_rollback_si_falla(bd, pool):
+    def consulta(cur):
+        raise ErrorBD("SG001", "fuera de tiempo")
+
+    with pytest.raises(EntregaFueraDeTiempoError):
+        bd.en_todos(consulta)
+    assert pool.conexion.rollbacks == 1 and pool.conexion.commits == 0

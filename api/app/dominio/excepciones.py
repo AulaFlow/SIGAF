@@ -50,3 +50,12 @@ class CalificacionInvalidaError(DatoInvalidoError):
 
 class ServicioNoDisponibleError(SigafError):
     """Una base de la que depende la operación no responde (p. ej. MongoDB)."""
+
+
+class CredencialesInvalidasError(SigafError):
+    """Correo o contraseña incorrectos (issue #11).
+
+    Es UNA sola excepción para todos los casos (correo que no existe, contraseña mala,
+    cuenta inactiva o hash dañado): el cliente no debe poder distinguirlos.
+    El motivo real solo queda en la bitácora de accesos.
+    """

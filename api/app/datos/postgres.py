@@ -16,9 +16,9 @@ queda nada de la petición anterior):
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 import psycopg
 from psycopg.rows import dict_row
@@ -27,6 +27,8 @@ from psycopg_pool import ConnectionPool
 from ..config import Configuracion
 from ..dominio.personas import Persona
 from .errores import traducir_error_bd
+
+T = TypeVar("T")
 
 
 class FuenteDeConexiones(Protocol):
@@ -101,3 +103,15 @@ class BaseDeDatos:
             conexion.commit()
         finally:
             pool.putconn(conexion)   # siempre regresa al pool (si quedó rota, el pool la descarta)
+
+    def en_todos(
+        self, consulta: Callable[[psycopg.Cursor], list[T]], persona: Persona | None = None
+    ) -> list[T]:
+        """Corre la consulta "en todos los fragmentos". Con una sola base, son uno: la base.
+
+        BaseDistribuida (enrutador.py) lo sobrescribe para correrla en A y en B. Así quien
+        llama no necesita saber si la base está fragmentada (issue #11: el login busca al
+        alumno o al profesor sin conocer su centro).
+        """
+        with self.transaccion(persona) as cur:
+            return list(consulta(cur))

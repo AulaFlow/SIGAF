@@ -25,6 +25,44 @@
         }
       }
     },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Iniciar sesión",
+        "description": "Correo y contraseña -> token JWT para mandar en `Authorization: Bearer <token>`.\n\nCualquier fallo (correo que no existe, contraseña mala, cuenta inactiva) responde\nel mismo 401. Cada intento, bueno o malo, queda en la bitácora de accesos.",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Correo o contraseña incorrectos (siempre el mismo mensaje)"
+          },
+          "422": {
+            "description": "Correo o contraseña con formato inválido"
+          }
+        }
+      }
+    },
     "/alumno/datos": {
       "get": {
         "tags": [
@@ -1573,6 +1611,31 @@
         ],
         "title": "InscripcionPorAdmin"
       },
+      "Login": {
+        "properties": {
+          "correo": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Correo"
+          },
+          "contrasena": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Contrasena"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "correo",
+          "contrasena"
+        ],
+        "title": "Login",
+        "description": "Solo correo y contraseña. El rol NO se manda: sale de la base."
+      },
       "MateriaBoleta": {
         "properties": {
           "inscripcion_id": {
@@ -1846,6 +1909,15 @@
         ],
         "title": "ResumenDeGrupo"
       },
+      "Rol": {
+        "type": "string",
+        "enum": [
+          "alumno",
+          "profesor",
+          "administrador"
+        ],
+        "title": "Rol"
+      },
       "SituacionAcademica": {
         "properties": {
           "materias_aprobadas": {
@@ -1979,6 +2051,36 @@
           "fecha_limite"
         ],
         "title": "TareaNueva"
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "const": "bearer",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expira_en": {
+            "type": "integer",
+            "title": "Expira En",
+            "description": "Segundos de vida del token"
+          },
+          "rol": {
+            "$ref": "#/components/schemas/Rol",
+            "description": "Para que la app abra la pantalla de su rol"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expira_en",
+          "rol"
+        ],
+        "title": "Token"
       },
       "ValidationError": {
         "properties": {

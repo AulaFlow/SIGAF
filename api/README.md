@@ -19,7 +19,7 @@ app/
   servicios/           casos de uso por rol: alumno, profesor, inscripciones, estadísticas
   datos/mongo.py       lectura de MongoDB (pymongo): consultas y pipelines fijos
   rutas/               capa HTTP (#23): alumno, profesor, estadísticas; solo llaman servicios
-  seguridad.py         usuario_actual() y requiere_rol() (login JWT del #11; hoy provisional)
+  seguridad.py         usuario_actual() y requiere_rol() (la persona sale del token JWT, #11)
 scripts/exportar_openapi.py  genera openapi.json para la app de Flutter
 ```
 
@@ -58,6 +58,8 @@ Copia `.env.example` como `.env` (git lo ignora) y llénalo. La API entra
 | `SIGAF_PASS_API` | sí | Contraseña de `sigaf_api_svc` (12+ caracteres) |
 | `SIGAF_LLAVE_DATOS` | sí | Llave AES-256 de datos personales (32+) |
 | `SIGAF_LLAVE_SEUDONIMO` | sí | Llave HMAC de la matrícula (32+) |
+| `SIGAF_JWT_LLAVE` | sí | Llave que firma los tokens de sesión, HS256 (32+) |
+| `SIGAF_JWT_MINUTOS` | no | Vida del token en minutos, 5 a 1440 (default 60) |
 | `SIGAF_DB_HOST` / `SIGAF_DB_PORT` / `SIGAF_DB_NOMBRE` | no | `localhost` / `5432` / `postgres` |
 | `SIGAF_DB_SSLMODE` | no | `require` (default), `verify-ca` o `verify-full`. Nunca sin TLS |
 | `SIGAF_DB_SSLROOTCERT` | con `verify-*` | Ruta a `ca.crt` de `infra/postgres/certs` |
@@ -162,3 +164,11 @@ Requieren `db/07_margen_entrega.sql` aplicado y TLS activo en `sigaf-db`:
 set -a; source .env; set +a
 pytest tests/test_integracion_postgres.py -v --no-cov
 ```
+
+`tests/test_integracion_auth.py` (login, #11) además necesita `db/09_bitacora_acceso.sql` y
+`db/pruebas.sql` cargados, con `SIGAF_LLAVE_DATOS` y `SIGAF_LLAVE_SEUDONIMO` iguales a las de
+`pruebas.sql`. Entra con la contraseña de desarrollo de `db/README.md` y no deja renglones en
+`bitacora_acceso` (cada transacción termina en rollback).
+
+En Windows usa `SIGAF_DB_HOST=127.0.0.1` y no `localhost`: `localhost` puede resolverse a
+`::1` y la conexión se queda esperando si Docker solo publica el puerto en IPv4.
